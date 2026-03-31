@@ -1,9 +1,3 @@
-import React, { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectItem } from "@/components/ui/select";
-import { motion } from "framer-motion";
-
 const initialData = [
   {
     id: 1,
@@ -47,10 +41,18 @@ export default function Dashboard() {
         {/* Top Bar */}
         <div className="flex justify-between items-center mb-6">
           <Input
-            placeholder="Search projects..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-1/3"
+            <input
+  type="text"
+  placeholder="Search projects..."
+  value={search}
+  onChange={(e) => setSearch(e.target.value)}
+  style={{
+    padding: "10px",
+    width: "300px",
+    borderRadius: "8px",
+    border: "1px solid #ccc"
+  }}
+/>
           />
 
           <select
@@ -66,38 +68,51 @@ export default function Dashboard() {
 
         {/* Metrics */}
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardContent>
+          <div style={{
+  background: "#fff",
+  padding: "16px",
+  borderRadius: "12px",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+}}>
               <p>Total Projects</p>
               <h2 className="text-2xl font-bold">{projects.length}</h2>
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card>
-            <CardContent>
+          <div style={{
+  background: "#fff",
+  padding: "16px",
+  borderRadius: "12px",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+}}>
               <p>Active</p>
               <h2 className="text-2xl font-bold">
                 {projects.filter((p) => p.status === "Active").length}
               </h2>
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card>
-            <CardContent>
+          <div style={{
+  background: "#fff",
+  padding: "16px",
+  borderRadius: "12px",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+}}>
               <p>Delayed</p>
               <h2 className="text-2xl font-bold">
                 {projects.filter((p) => p.status === "Delayed").length}
               </h2>
-            </CardContent>
-          </Card>
+            </div>
         </div>
 
         {/* Project Cards */}
         <div className="grid grid-cols-3 gap-4">
           {filteredProjects.map((project) => (
-            <motion.div whileHover={{ scale: 1.05 }} key={project.id}>
-              <Card className="rounded-2xl shadow-md">
-                <CardContent>
+            <div style={{ transition: "0.3s" }}>
+              <div style={{
+  background: "#fff",
+  padding: "16px",
+  borderRadius: "12px",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+}}>
                   <h3 className="font-bold text-lg">{project.name}</h3>
                   <p className="text-sm">Status: {project.status}</p>
 
@@ -107,8 +122,7 @@ export default function Dashboard() {
                       style={{ width: `${project.progress}%` }}
                     ></div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
             </motion.div>
           ))}
         </div>
