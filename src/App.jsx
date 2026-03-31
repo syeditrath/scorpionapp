@@ -1,57 +1,42 @@
 import React, { useState, useEffect, useRef } from "react";
 import * as XLSX from "xlsx";
 
-/* ─── HEAVY UTILITY THEME ─── */
+/* ─── PROFESSIONAL ENTERPRISE THEME ─── */
 const T = {
-  bg: "#1a1c1e",          // Deep Asphalt
-  sidebar: "#121416",     // Dark Iron
-  card: "#24282b",        // Reinforced Concrete
-  cardInner: "#1e2124",   // Darker Pit
-  border: "#3f444a",      // Steel Girder
-  warn: "#ff9800",        // Safety Orange
-  danger: "#f44336",      // Hazard Red
-  success: "#4caf50",     // Operational Green
-  text: "#e0e0e0",        // Brushed Metal
-  textSub: "#90a4ae",     // Dust/Slate
-  caution: "#ffd600"      // Caution Yellow
+  bg: "#f8fafc",          // Light gray background
+  sidebar: "#ffffff",     // Clean white sidebar
+  card: "#ffffff",        // White cards
+  border: "#e2e8f0",      // Soft borders
+  primary: "#0f172a",     // Navy blue for text/headers
+  accent: "#2563eb",      // Standard professional blue
+  success: "#10b981",     // Green for status
+  error: "#ef4444",       // Red for alerts
+  text: "#334155",        // Slate text
+  textLight: "#64748b"    // Muted slate
 };
 
-const GLOBAL_CSS = "@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Oswald:wght@500;700&display=swap'); body { background: #1a1c1e; color: #e0e0e0; margin: 0; font-family: 'Roboto Mono', monospace; } .hazard-stripe { background: repeating-linear-gradient(45deg, #ffd600, #ffd600 10px, #000 10px, #000 20px); height: 4px; width: 100%; } .heavy-btn { transition: 0.1s; border-bottom: 3px solid rgba(0,0,0,0.5); } .heavy-btn:active { transform: translateY(2px); border-bottom: 0px; }";
+const GLOBAL_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  body { background: #f8fafc; color: #334155; margin: 0; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+  button { transition: all 0.2s; }
+  tr:hover { background-color: #f1f5f9; }
+`;
 
 /* ─── HELPERS ─── */
 const uid = function() { return Math.random().toString(36).slice(2, 9); };
-const daysUntil = function(d) { if(!d) return null; return Math.ceil((new Date(d) - new Date()) / 86400000); };
+const daysUntil = function(d) { 
+  if(!d) return null; 
+  const diff = new Date(d) - new Date();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24)); 
+};
 
 /* ─── UI COMPONENTS ─── */
 
-function DrillStat(props) {
+function StatBox(props) {
   return (
-    <div style={{ flex: 1, background: T.card, border: "2px solid " + T.border, padding: "15px", position: "relative" }}>
-      <div style={{ fontSize: "10px", fontWeight: "700", color: T.textSub, marginBottom: "5px" }}>UNIT::{props.label}</div>
-      <div style={{ fontSize: "28px", fontWeight: "700", fontFamily: "Oswald", color: props.color || T.text }}>{props.value}</div>
-      <div style={{ position: "absolute", top: "0", right: "0", width: "10px", height: "10px", borderRight: "2px solid " + (props.color || T.border), borderTop: "2px solid " + (props.color || T.border) }}></div>
-    </div>
-  );
-}
-
-function SectionModule(props) {
-  return (
-    <div style={{ background: T.card, border: "2px solid " + T.border, display: "flex", flexDirection: "column" }}>
-      <div className="hazard-stripe"></div>
-      <div style={{ padding: "20px" }}>
-        <div style={{ fontFamily: "Oswald", fontSize: "18px", fontWeight: "700", marginBottom: "15px", color: props.color }}>{props.title}</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-          {props.stats.map(function(s, i) {
-            return (
-              <div key={i} style={{ background: T.cardInner, padding: "10px", border: "1px solid " + T.border }}>
-                <div style={{ fontSize: "9px", color: T.textSub }}>{s.lab}</div>
-                <div style={{ fontSize: "18px", fontWeight: "700", fontFamily: "Oswald", color: s.color || T.text }}>{s.val}</div>
-              </div>
-            );
-          })}
-        </div>
-        <button style={{ width: "100%", marginTop: "15px", padding: "8px", background: T.border, border: "none", color: "white", fontSize: "10px", fontWeight: "700", cursor: "pointer" }}>VIEW_RECORDS</button>
-      </div>
+    <div style={{ flex: 1, background: T.card, border: "1px solid " + T.border, borderRadius: "12px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+      <div style={{ fontSize: "13px", fontWeight: "600", color: T.textLight, marginBottom: "8px" }}>{props.label}</div>
+      <div style={{ fontSize: "28px", fontWeight: "700", color: props.color || T.primary }}>{props.value}</div>
     </div>
   );
 }
@@ -60,13 +45,13 @@ function SectionModule(props) {
 
 export default function App() {
   const [data, setData] = useState(function() {
-    const saved = localStorage.getItem("scorpion_drill_v1");
+    const saved = localStorage.getItem("scorpion_pro_v1");
     return saved ? JSON.parse(saved) : { manpower: [], equipment: [] };
   });
   const [page, setPage] = useState("dashboard");
 
   useEffect(function() {
-    localStorage.setItem("scorpion_drill_v1", JSON.stringify(data));
+    localStorage.setItem("scorpion_pro_v1", JSON.stringify(data));
     if (!document.getElementById("scorp-css")) {
       const s = document.createElement("style"); s.id = "scorp-css";
       s.textContent = GLOBAL_CSS; document.head.appendChild(s);
@@ -74,113 +59,147 @@ export default function App() {
   }, [data]);
 
   const alerts = [].concat(
-    data.manpower.map(function(m){ return { d: daysUntil(m.expiryDate) }; }),
-    data.equipment.map(function(e){ return { d: daysUntil(e.expiryDate) }; })
+    data.manpower.map(function(m){ return { name: m.name, d: daysUntil(m.expiryDate), type: "Personnel" }; }),
+    data.equipment.map(function(e){ return { name: e.name, d: daysUntil(e.expiryDate), type: "Equipment" }; })
   ).filter(function(a){ return a.d !== null && a.d <= 30; });
 
+  const navItem = function(id, label) {
+    const active = page === id;
+    return (
+      <button onClick={function(){ setPage(id); }} style={{
+        width: "100%", textAlign: "left", padding: "12px 16px", borderRadius: "8px", border: "none", cursor: "pointer",
+        background: active ? "#eff6ff" : "transparent", color: active ? T.accent : T.text, fontWeight: active ? "600" : "500", marginBottom: "4px"
+      }}>
+        {label}
+      </button>
+    );
+  };
+
   return (
-    <div style={{ display: "flex", height: "100vh", background: T.bg, color: T.text }}>
+    <div style={{ display: "flex", height: "100vh" }}>
       
       {/* SIDEBAR */}
-      <aside style={{ width: "250px", background: T.sidebar, borderRight: "4px solid " + T.border, padding: "25px", display: "flex", flexDirection: "column" }}>
-        <div style={{ marginBottom: "40px", borderBottom: "2px solid " + T.warn, paddingBottom: "10px" }}>
-          <div style={{ fontFamily: "Oswald", fontWeight: "700", fontSize: "24px", color: T.text }}>SCORPION_DRILL</div>
-          <div style={{ fontSize: "9px", color: T.warn, letterSpacing: "2px" }}>OPERATIONAL_TECH</div>
+      <aside style={{ width: "260px", background: T.sidebar, borderRight: "1px solid " + T.border, padding: "32px 24px", display: "flex", flexDirection: "column" }}>
+        <div style={{ marginBottom: "40px" }}>
+          <div style={{ fontWeight: "800", fontSize: "20px", color: T.primary, letterSpacing: "-0.5px" }}>SCORPION ARABIA</div>
+          <div style={{ fontSize: "12px", color: T.textLight }}>Asset Management System</div>
         </div>
 
-        <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
-          {["dashboard", "docs", "manpower", "equipment"].map(function(id) {
-            const active = page === id;
-            return (
-              <button key={id} onClick={function(){ setPage(id); }} className="heavy-btn" style={{
-                textAlign: "left", padding: "12px", border: "1px solid " + (active ? T.warn : T.border),
-                background: active ? T.warn : T.cardInner, color: active ? "#000" : T.textSub,
-                cursor: "pointer", fontWeight: "700", fontSize: "12px"
-              }}>
-                [{id.toUpperCase()}]
-              </button>
-            );
-          })}
+        <nav style={{ flex: 1 }}>
+          {navItem("dashboard", "Dashboard")}
+          {navItem("manpower", "Personnel")}
+          {navItem("equipment", "Equipment Fleet")}
         </nav>
-        <div style={{ fontSize: "10px", color: T.textSub }}>SYSTEM_STATUS: OK</div>
       </aside>
 
-      {/* MAIN CONTENT */}
-      <main style={{ flex: 1, padding: "30px", overflowY: "auto" }}>
-        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px", background: T.card, padding: "15px", border: "1px solid " + T.border }}>
-          <div style={{ fontSize: "14px", fontWeight: "700" }}>SITE_MAP // RIG_01 // SECTOR_G</div>
-          <div style={{ background: alerts.length > 0 ? T.danger : T.success, color: "#fff", padding: "4px 12px", fontWeight: "700", fontSize: "11px" }}>
-            {alerts.length > 0 ? "HAZARD: " + alerts.length + " EXPIRIES" : "ALL SYSTEMS NOMINAL"}
-          </div>
+      {/* CONTENT AREA */}
+      <main style={{ flex: 1, padding: "40px", overflowY: "auto" }}>
+        
+        <header style={{ marginBottom: "32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h1 style={{ fontSize: "24px", fontWeight: "700", color: T.primary, margin: 0 }}>
+            {page === "dashboard" ? "Overview" : page.charAt(0).toUpperCase() + page.slice(1)}
+          </h1>
+          <div style={{ fontSize: "14px", color: T.textLight }}>March 2026</div>
         </header>
 
         {page === "dashboard" && (
           <div>
-            {/* Top Stat Row */}
-            <div style={{ display: "flex", gap: "15px", marginBottom: "30px" }}>
-              <DrillStat label="Critical" value={alerts.length} color={alerts.length > 0 ? T.danger : T.success} />
-              <DrillStat label="Personnel" value={data.manpower.length} />
-              <DrillStat label="Fleet" value={data.equipment.length} />
-              <DrillStat label="Depth" value="420m" color={T.caution} />
+            <div style={{ display: "flex", gap: "24px", marginBottom: "32px" }}>
+              <StatBox label="Pending Expiries" value={alerts.length} color={alerts.length > 0 ? T.error : T.success} />
+              <StatBox label="Total Personnel" value={data.manpower.length} />
+              <StatBox label="Total Equipment" value={data.equipment.length} />
             </div>
 
-            {/* Heavy Progress Bar */}
-            <div style={{ background: T.card, border: "2px solid " + T.border, padding: "20px", marginBottom: "30px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "11px", fontWeight: "700" }}>
-                <span>DRILL_COMPLIANCE_LEVEL</span>
-                <span style={{ color: T.success }}>100%</span>
-              </div>
-              <div style={{ height: "14px", background: T.bg, border: "1px solid " + T.border, padding: "2px" }}>
-                <div style={{ width: "100%", height: "100%", background: T.success }}></div>
-              </div>
-            </div>
-
-            {/* Module Grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px" }}>
-              <SectionModule 
-                title="OPERATIONAL_DOCS" color={T.warn}
-                stats={[{lab: "CR_EXP", val: "VALID"}, {lab: "INSURANCE", val: "ACTIVE"}, {lab: "LICENSES", val: "9"}, {lab: "PERMITS", val: "OK"}]} 
-              />
-              <SectionModule 
-                title="MANPOWER_UNIT" color={T.warn}
-                stats={[{lab: "STAFF", val: data.manpower.length}, {lab: "CERT_ALERTS", val: "0", color: T.success}, {lab: "SHIFT", val: "DAY"}, {lab: "STRENGTH", val: "100%"}]} 
-              />
-              <SectionModule 
-                title="EQUIPMENT_LOG" color={T.warn}
-                stats={[{lab: "ASSETS", val: data.equipment.length}, {lab: "MAINTENANCE", val: "OK"}, {lab: "IDLE", val: "2"}, {lab: "FUEL", val: "88%"}]} 
-              />
+            <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: "12px", padding: "24px" }}>
+              <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "20px" }}>Urgent Renewals (Next 30 Days)</h3>
+              {alerts.length === 0 ? (
+                <div style={{ color: T.textLight, padding: "20px 0" }}>No urgent renewals found.</div>
+              ) : (
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid " + T.border, textAlign: "left", color: T.textLight, fontSize: "12px" }}>
+                      <th style={{ padding: "12px 0" }}>ASSET NAME</th>
+                      <th>CATEGORY</th>
+                      <th style={{ textAlign: "right" }}>DAYS REMAINING</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {alerts.map(function(item, i) {
+                      return (
+                        <tr key={i} style={{ borderBottom: "1px solid #f1f5f9", fontSize: "14px" }}>
+                          <td style={{ padding: "16px 0", fontWeight: "500" }}>{item.name}</td>
+                          <td>{item.type}</td>
+                          <td style={{ textAlign: "right", color: T.error, fontWeight: "600" }}>{item.d} days</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         )}
 
         {(page === "manpower" || page === "equipment") && (
-          <div style={{ background: T.card, border: "2px solid " + T.border, padding: "25px" }}>
-             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", borderBottom: "2px solid " + T.border, paddingBottom: "15px" }}>
-                <h2 style={{ fontFamily: "Oswald", fontSize: "24px" }}>SITE_{page.toUpperCase()}_LOG</h2>
-                <label style={{ background: T.warn, color: "#000", padding: "8px 20px", fontWeight: "700", cursor: "pointer", fontSize: "11px" }}>
-                   IMPORT_XLSX
+          <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: "12px", overflow: "hidden" }}>
+             <div style={{ padding: "24px", borderBottom: "1px solid " + T.border, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                   <h2 style={{ fontSize: "18px", fontWeight: "600", margin: "0 0 4px 0" }}>{page === "manpower" ? "Personnel List" : "Equipment Inventory"}</h2>
+                   <p style={{ fontSize: "13px", color: T.textLight, margin: 0 }}>Manage and track your operational assets.</p>
+                </div>
+                <label style={{ background: T.accent, color: "#fff", padding: "10px 20px", borderRadius: "8px", fontWeight: "600", cursor: "pointer", fontSize: "14px" }}>
+                   Import Excel
                    <input type="file" style={{ display: "none" }} onChange={function(e) {
                       const file = e.target.files[0];
+                      if(!file) return;
                       const reader = new FileReader();
                       reader.onload = function(evt) {
                         const wb = XLSX.read(evt.target.result, { type: "array", cellDates: true });
                         const list = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-                        const parsed = list.map(function(r) { return { id: uid(), name: r.NAME || r.EQUIPMENT, expiryDate: r["EXPIRY DATE"] }; });
+                        const parsed = list.map(function(r) { 
+                          return { id: uid(), name: r.NAME || r.EQUIPMENT || "Unknown", expiryDate: r["EXPIRY DATE"] || "" }; 
+                        });
                         setData(function(prev) { return { ...prev, [page]: prev[page].concat(parsed) }; });
                       };
                       reader.readAsArrayBuffer(file);
                    }} />
                 </label>
              </div>
-             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {data[page].length === 0 ? <div style={{ color: T.textSub }}>Log empty. Awaiting data import.</div> : data[page].map(function(item) {
-                  return (
-                    <div key={item.id} style={{ padding: "15px", background: T.cardInner, border: "1px solid " + T.border, display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ fontWeight: "700" }}>{item.name}</span>
-                      <span style={{ color: T.warn }}>LOGGED::OK</span>
-                    </div>
-                  );
-                })}
+             
+             <div style={{ padding: "0" }}>
+                {data[page].length === 0 ? (
+                  <div style={{ padding: "40px", textAlign: "center", color: T.textLight }}>No data available. Please upload an Excel file.</div>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead style={{ background: "#f8fafc", fontSize: "12px", color: T.textLight, textAlign: "left" }}>
+                      <tr>
+                        <th style={{ padding: "12px 24px" }}>NAME</th>
+                        <th>EXPIRY DATE</th>
+                        <th style={{ textAlign: "right", paddingRight: "24px" }}>STATUS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data[page].map(function(item) {
+                        const days = daysUntil(item.expiryDate);
+                        return (
+                          <tr key={item.id} style={{ borderBottom: "1px solid " + T.border, fontSize: "14px" }}>
+                            <td style={{ padding: "16px 24px", fontWeight: "500" }}>{item.name}</td>
+                            <td>{item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : "N/A"}</td>
+                            <td style={{ textAlign: "right", paddingRight: "24px" }}>
+                               <span style={{ 
+                                 padding: "4px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: "600",
+                                 background: days <= 30 ? "#fef2f2" : "#f0fdf4",
+                                 color: days <= 30 ? T.error : T.success
+                               }}>
+                                 {days <= 30 ? "Renewal Needed" : "Active"}
+                               </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
              </div>
           </div>
         )}
