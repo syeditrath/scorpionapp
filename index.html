@@ -3,55 +3,51 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scorpion Arabia Dashboard</title>
+<title>Scorpion Arabia Premium</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <style>
 body{margin:0;font-family:Arial;background:#0f172a;color:#e2e8f0}
 .sidebar{width:240px;height:100vh;background:#020617;position:fixed;padding:20px}
-.sidebar h2{font-size:18px;margin-bottom:30px}
-.sidebar p{padding:10px;border-radius:8px;cursor:pointer;margin-bottom:10px;color:#94a3b8}
-.sidebar p:hover{background:#1e293b;color:#fff}
+.sidebar h2{margin-bottom:30px}
+.sidebar p{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;color:#94a3b8;transition:0.3s}
+.sidebar p:hover{background:#1e293b;color:#fff;transform:translateX(5px)}
 .main{margin-left:260px;padding:20px}
 .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
 .title{font-size:22px;font-weight:bold}
 .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;margin-bottom:20px}
-.stat-card{background:#020617;padding:15px;border-radius:12px}
+.stat-card{background:#020617;padding:15px;border-radius:12px;transition:0.3s}
+.stat-card:hover{transform:translateY(-5px);box-shadow:0 10px 20px rgba(0,0,0,0.3)}
 .stat-card h3{margin:0;font-size:22px}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.card{background:#020617;padding:15px;border-radius:12px}
-.card h3{margin-bottom:10px}
+.card{background:#020617;padding:15px;border-radius:12px;transition:0.3s}
+.card:hover{transform:scale(1.03)}
+.card h3{display:flex;align-items:center;gap:10px}
 .link-btn{color:#38bdf8;cursor:pointer;margin-top:10px;display:inline-block}
-.section{display:none}
+.section{display:none;animation:fade 0.4s ease}
 .active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 input,button{padding:8px;border-radius:6px;border:none;margin:5px}
-input{width:250px}
-button{background:#38bdf8;color:#000;cursor:pointer}
+button{background:#38bdf8;color:#000;cursor:pointer;transition:0.3s}
+button:hover{background:#0ea5e9}
 ul{padding-left:20px}
 </style>
 </head>
 <body>
-<div id="loginScreen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#020617;display:flex;justify-content:center;align-items:center;z-index:9999;">
-  <div style="background:#111827;padding:30px;border-radius:10px;text-align:center;">
-    <h2 style="color:white;">Login</h2>
-    <input type="password" id="password" placeholder="Enter Password">
-    <br><br>
-    <button onclick="login()">Login</button>
-  </div>
-</div>
+
 <div class="sidebar">
-<h2>SCORPION ARABIA</h2>
-<p onclick="showSection('dashboard')">Dashboard</p>
-<p onclick="showSection('scorpion')">Scorpion Documents</p>
-<p onclick="showSection('projects')">Project Docs</p>
-<p onclick="showSection('manpower')">Manpower</p>
-<p onclick="showSection('equipment')">Equipment</p>
+<h2>⚡ SCORPION</h2>
+<p onclick="showSection('dashboard')"><i class="fa fa-chart-line"></i> Dashboard</p>
+<p onclick="showSection('scorpion')"><i class="fa fa-folder"></i> Scorpion Docs</p>
+<p onclick="showSection('projects')"><i class="fa fa-briefcase"></i> Projects</p>
+<p onclick="showSection('manpower')"><i class="fa fa-users"></i> Manpower</p>
+<p onclick="showSection('equipment')"><i class="fa fa-cogs"></i> Equipment</p>
 </div>
 
 <div class="main">
 
-<!-- Dashboard -->
 <div id="dashboard" class="section active">
 <div class="topbar">
-<div class="title">Document & Asset Manager</div>
+<div class="title">🚀 Premium Dashboard</div>
 </div>
 
 <div class="stats">
@@ -64,25 +60,24 @@ ul{padding-left:20px}
 
 <div class="grid">
 <div class="card">
-<h3>Scorpion Documents</h3>
+<h3><i class="fa fa-folder-open"></i> Scorpion Documents</h3>
 <p id="companyCount">0 Documents</p>
 <span class="link-btn" onclick="showSection('scorpion')">Open →</span>
 </div>
 
 <div class="card">
-<h3>Project Documents</h3>
+<h3><i class="fa fa-file"></i> Project Documents</h3>
 <p id="projDocCount">0 Docs</p>
 <span class="link-btn" onclick="showSection('projects')">Open →</span>
 </div>
 
 <div class="card">
-<h3>Manpower</h3>
+<h3><i class="fa fa-users"></i> Manpower</h3>
 <p>Manage staff docs</p>
 </div>
 </div>
 </div>
 
-<!-- Scorpion Docs -->
 <div id="scorpion" class="section">
 <h2>Scorpion Documents</h2>
 <input id="companyLink" placeholder="Paste OneDrive link">
@@ -90,7 +85,6 @@ ul{padding-left:20px}
 <ul id="companyList"></ul>
 </div>
 
-<!-- Project Docs -->
 <div id="projects" class="section">
 <h2>Projects</h2>
 <input id="projectName" placeholder="New Project">
@@ -99,7 +93,6 @@ ul{padding-left:20px}
 <div id="projectDetails"></div>
 </div>
 
-<!-- Others -->
 <div id="manpower" class="section"><h2>Manpower</h2></div>
 <div id="equipment" class="section"><h2>Equipment</h2></div>
 
@@ -107,36 +100,14 @@ ul{padding-left:20px}
 
 <script>
 function showSection(id){document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
-const ADMIN_PASSWORD = "1234"; // change this
 
-function login() {
-  const input = document.getElementById("password").value;
-
-  if (input === ADMIN_PASSWORD) {
-    localStorage.setItem("isAdmin", "true");
-    document.getElementById("loginScreen").style.display = "none";
-  } else {
-    alert("Wrong password");
-  }
-}
-
-// Auto login check
-window.onload = function () {
-  const isAdmin = localStorage.getItem("isAdmin");
-
-  if (isAdmin === "true") {
-    document.getElementById("loginScreen").style.display = "none";
-  }
-};
-// Company Docs
 function addCompanyLink(){
 const link=document.getElementById('companyLink').value;
 if(!link) return;
 let data=JSON.parse(localStorage.getItem('companyLinks')||"[]");
 data.push(link);
 localStorage.setItem('companyLinks',JSON.stringify(data));
-loadCompany();
-updateStats();
+loadCompany();updateStats();
 }
 
 function loadCompany(){
@@ -145,12 +116,11 @@ const data=JSON.parse(localStorage.getItem('companyLinks')||"[]");
 list.innerHTML="";
 data.forEach(l=>{
 const li=document.createElement('li');
-li.innerHTML=`<a href='${l}' target='_blank'>Open Document</a>`;
+li.innerHTML=`<a href='${l}' target='_blank'>Open</a>`;
 list.appendChild(li);
 });
 }
 
-// Projects
 let projects=JSON.parse(localStorage.getItem('projectsV3')||"[]");
 
 function addProject(){
@@ -196,7 +166,6 @@ localStorage.setItem('projectsV3',JSON.stringify(projects));
 showTab(i,t);updateStats();
 }
 
-// Stats
 function updateStats(){
 const company=JSON.parse(localStorage.getItem('companyLinks')||"[]").length;
 let projDocs=0;
@@ -208,9 +177,7 @@ document.getElementById('companyCount').innerText=company+" Documents";
 document.getElementById('projDocCount').innerText=projDocs+" Docs";
 }
 
-loadCompany();
-loadProjects();
-updateStats();
+loadCompany();loadProjects();updateStats();
 </script>
 
 </body>
