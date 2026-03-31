@@ -3,157 +3,187 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scorpion Dashboard</title>
+<title>Scorpion Arabia Dashboard</title>
 <style>
-body{margin:0;font-family:Arial;background:#f4f6f9}
-.sidebar{width:220px;height:100vh;background:#111827;color:#fff;position:fixed;padding:20px}
-.sidebar h2{margin-bottom:20px}
-.sidebar p{cursor:pointer;margin:10px 0;opacity:.7}
-.sidebar p:hover{opacity:1}
-.main{margin-left:240px;padding:20px}
+body{margin:0;font-family:Arial;background:#0f172a;color:#e2e8f0}
+.sidebar{width:240px;height:100vh;background:#020617;position:fixed;padding:20px}
+.sidebar h2{font-size:18px;margin-bottom:30px}
+.sidebar p{padding:10px;border-radius:8px;cursor:pointer;margin-bottom:10px;color:#94a3b8}
+.sidebar p:hover{background:#1e293b;color:#fff}
+.main{margin-left:260px;padding:20px}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.title{font-size:22px;font-weight:bold}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;margin-bottom:20px}
+.stat-card{background:#020617;padding:15px;border-radius:12px}
+.stat-card h3{margin:0;font-size:22px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.card{background:#020617;padding:15px;border-radius:12px}
+.card h3{margin-bottom:10px}
+.link-btn{color:#38bdf8;cursor:pointer;margin-top:10px;display:inline-block}
 .section{display:none}
 .active{display:block}
-.card{background:#fff;padding:15px;border-radius:10px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,.1)}
-input,button{padding:8px;margin:5px;border-radius:6px;border:1px solid #ccc}
-button{background:#2563eb;color:#fff;border:none;cursor:pointer}
-.tab-btn{margin-right:5px}
+input,button{padding:8px;border-radius:6px;border:none;margin:5px}
+input{width:250px}
+button{background:#38bdf8;color:#000;cursor:pointer}
+ul{padding-left:20px}
 </style>
 </head>
 <body>
 
 <div class="sidebar">
-<h2>Dashboard</h2>
+<h2>SCORPION ARABIA</h2>
+<p onclick="showSection('dashboard')">Dashboard</p>
 <p onclick="showSection('scorpion')">Scorpion Documents</p>
-<p onclick="showSection('projects')">Project Documents</p>
-<p onclick="showSection('manpower')">Manpower Documents</p>
-<p onclick="showSection('equipment')">Equipment Documents</p>
+<p onclick="showSection('projects')">Project Docs</p>
+<p onclick="showSection('manpower')">Manpower</p>
+<p onclick="showSection('equipment')">Equipment</p>
 </div>
 
 <div class="main">
 
-<!-- Scorpion Documents -->
-<div id="scorpion" class="section active">
+<!-- Dashboard -->
+<div id="dashboard" class="section active">
+<div class="topbar">
+<div class="title">Document & Asset Manager</div>
+</div>
+
+<div class="stats">
+<div class="stat-card"><h3 id="totalDocs">0</h3><p>Total Docs</p></div>
+<div class="stat-card"><h3 id="projectsCount">0</h3><p>Projects</p></div>
+<div class="stat-card"><h3>100%</h3><p>Compliance</p></div>
+<div class="stat-card"><h3>10</h3><p>People</p></div>
+<div class="stat-card"><h3>34</h3><p>Assets</p></div>
+</div>
+
+<div class="grid">
+<div class="card">
+<h3>Scorpion Documents</h3>
+<p id="companyCount">0 Documents</p>
+<span class="link-btn" onclick="showSection('scorpion')">Open →</span>
+</div>
+
+<div class="card">
+<h3>Project Documents</h3>
+<p id="projDocCount">0 Docs</p>
+<span class="link-btn" onclick="showSection('projects')">Open →</span>
+</div>
+
+<div class="card">
+<h3>Manpower</h3>
+<p>Manage staff docs</p>
+</div>
+</div>
+</div>
+
+<!-- Scorpion Docs -->
+<div id="scorpion" class="section">
 <h2>Scorpion Documents</h2>
-<input type="text" id="companyLink" placeholder="Paste OneDrive Link">
+<input id="companyLink" placeholder="Paste OneDrive link">
 <button onclick="addCompanyLink()">Add</button>
 <ul id="companyList"></ul>
 </div>
 
-<!-- Project Documents -->
+<!-- Project Docs -->
 <div id="projects" class="section">
-<h2>Project Documents</h2>
-<input type="text" id="projectName" placeholder="New Project Name">
-<button onclick="addProject()">Add Project</button>
-
+<h2>Projects</h2>
+<input id="projectName" placeholder="New Project">
+<button onclick="addProject()">Add</button>
 <div id="projectList"></div>
-
 <div id="projectDetails"></div>
 </div>
 
-<!-- Manpower -->
-<div id="manpower" class="section">
-<h2>Manpower Documents</h2>
-<p>Coming soon</p>
-</div>
-
-<!-- Equipment -->
-<div id="equipment" class="section">
-<h2>Equipment Documents</h2>
-<p>Coming soon</p>
-</div>
+<!-- Others -->
+<div id="manpower" class="section"><h2>Manpower</h2></div>
+<div id="equipment" class="section"><h2>Equipment</h2></div>
 
 </div>
 
 <script>
-// Navigation
-function showSection(id){
- document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
- document.getElementById(id).classList.add('active');
-}
+function showSection(id){document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
 
-// Scorpion Docs
+// Company Docs
 function addCompanyLink(){
- const link=document.getElementById('companyLink').value;
- if(!link) return;
- const data=JSON.parse(localStorage.getItem('companyLinks')||"[]");
- data.push(link);
- localStorage.setItem('companyLinks',JSON.stringify(data));
- loadCompanyLinks();
+const link=document.getElementById('companyLink').value;
+if(!link) return;
+let data=JSON.parse(localStorage.getItem('companyLinks')||"[]");
+data.push(link);
+localStorage.setItem('companyLinks',JSON.stringify(data));
+loadCompany();
+updateStats();
 }
 
-function loadCompanyLinks(){
- const list=document.getElementById('companyList');
- const data=JSON.parse(localStorage.getItem('companyLinks')||"[]");
- list.innerHTML="";
- data.forEach(l=>{
- const li=document.createElement('li');
- li.innerHTML=`<a href='${l}' target='_blank'>Open Document</a>`;
- list.appendChild(li);
- });
+function loadCompany(){
+const list=document.getElementById('companyList');
+const data=JSON.parse(localStorage.getItem('companyLinks')||"[]");
+list.innerHTML="";
+data.forEach(l=>{
+const li=document.createElement('li');
+li.innerHTML=`<a href='${l}' target='_blank'>Open Document</a>`;
+list.appendChild(li);
+});
 }
 
 // Projects
-let projects=JSON.parse(localStorage.getItem('projectsV2')||"[]");
+let projects=JSON.parse(localStorage.getItem('projectsV3')||"[]");
 
 function addProject(){
- const name=document.getElementById('projectName').value;
- if(!name) return;
- projects.push({name,docs:{invoices:[],jcc:[],wo:[]}});
- localStorage.setItem('projectsV2',JSON.stringify(projects));
- loadProjects();
-}
-
-function deleteProject(index){
- projects.splice(index,1);
- localStorage.setItem('projectsV2',JSON.stringify(projects));
- loadProjects();
- document.getElementById('projectDetails').innerHTML="";
+const name=document.getElementById('projectName').value;
+if(!name) return;
+projects.push({name,docs:{invoices:[],jcc:[],wo:[]}});
+localStorage.setItem('projectsV3',JSON.stringify(projects));
+loadProjects();updateStats();
 }
 
 function loadProjects(){
- const list=document.getElementById('projectList');
- list.innerHTML="";
- projects.forEach((p,i)=>{
- const div=document.createElement('div');
- div.className='card';
- div.innerHTML=`${p.name} 
- <button onclick='openProject(${i})'>Open</button>
- <button onclick='deleteProject(${i})'>Delete</button>`;
- list.appendChild(div);
- });
+const list=document.getElementById('projectList');
+list.innerHTML="";
+projects.forEach((p,i)=>{
+const div=document.createElement('div');
+div.className='card';
+div.innerHTML=`${p.name} <button onclick='openProject(${i})'>Open</button>`;
+list.appendChild(div);
+});
 }
 
-function openProject(index){
- const p=projects[index];
- const div=document.getElementById('projectDetails');
- div.innerHTML=`
- <h3>${p.name}</h3>
- <button class='tab-btn' onclick="showTab(${index},'invoices')">Invoices</button>
- <button class='tab-btn' onclick="showTab(${index},'jcc')">Job Completion Certificates</button>
- <button class='tab-btn' onclick="showTab(${index},'wo')">Work Orders</button>
- <div id='tabContent'></div>`;
+function openProject(i){
+const p=projects[i];
+const d=document.getElementById('projectDetails');
+d.innerHTML=`<h3>${p.name}</h3>
+<button onclick="showTab(${i},'invoices')">Invoices</button>
+<button onclick="showTab(${i},'jcc')">JCC</button>
+<button onclick="showTab(${i},'wo')">WO</button>
+<div id='tab'></div>`;
 }
 
-function showTab(index,type){
- const p=projects[index];
- const content=document.getElementById('tabContent');
- content.innerHTML=`
- <input type='text' id='docLink' placeholder='Paste OneDrive Link'>
- <button onclick='addDoc(${index},"${type}")'>Add</button>
- <ul>${p.docs[type].map(d=>`<li><a href='${d}' target='_blank'>Open</a></li>`).join('')}</ul>`;
+function showTab(i,t){
+const p=projects[i];
+const tab=document.getElementById('tab');
+tab.innerHTML=`<input id='docLink'><button onclick='addDoc(${i},"${t}")'>Add</button>
+<ul>${p.docs[t].map(x=>`<li><a href='${x}' target='_blank'>Open</a></li>`).join('')}</ul>`;
 }
 
-function addDoc(index,type){
- const link=document.getElementById('docLink').value;
- if(!link) return;
- projects[index].docs[type].push(link);
- localStorage.setItem('projectsV2',JSON.stringify(projects));
- showTab(index,type);
+function addDoc(i,t){
+const link=document.getElementById('docLink').value;
+projects[i].docs[t].push(link);
+localStorage.setItem('projectsV3',JSON.stringify(projects));
+showTab(i,t);updateStats();
 }
 
-// Init
-loadCompanyLinks();
+// Stats
+function updateStats(){
+const company=JSON.parse(localStorage.getItem('companyLinks')||"[]").length;
+let projDocs=0;
+projects.forEach(p=>{projDocs+=p.docs.invoices.length+p.docs.jcc.length+p.docs.wo.length});
+
+document.getElementById('totalDocs').innerText=company+projDocs;
+document.getElementById('projectsCount').innerText=projects.length;
+document.getElementById('companyCount').innerText=company+" Documents";
+document.getElementById('projDocCount').innerText=projDocs+" Docs";
+}
+
+loadCompany();
 loadProjects();
+updateStats();
 </script>
 
 </body>
