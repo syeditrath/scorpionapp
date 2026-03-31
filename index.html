@@ -7,40 +7,181 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <style>
 body{margin:0;font-family:Arial;background:#0f172a;color:#e2e8f0}
-.sidebar{width:240px;height:100vh;background:#020617;position:fixed;padding:20px}
-.sidebar h2{margin-bottom:30px}
-.sidebar p{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;color:#94a3b8;transition:0.3s}
-.sidebar p:hover{background:#1e293b;color:#fff;transform:translateX(5px)}
-.main{margin-left:260px;padding:20px}
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
-.title{font-size:22px;font-weight:bold}
-.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;margin-bottom:20px}
-.stat-card{background:#020617;padding:15px;border-radius:12px;transition:0.3s}
-.stat-card:hover{transform:translateY(-5px);box-shadow:0 10px 20px rgba(0,0,0,0.3)}
-.stat-card h3{margin:0;font-size:22px}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.card{background:#020617;padding:15px;border-radius:12px;transition:0.3s}
-.card:hover{transform:scale(1.03)}
-.card h3{display:flex;align-items:center;gap:10px}
-.link-btn{color:#38bdf8;cursor:pointer;margin-top:10px;display:inline-block}
-.section{display:none;animation:fade 0.4s ease}
+
+/* Sidebar */
+.sidebar{
+  width:240px;
+  height:100vh;
+  background:#020617;
+  position:fixed;
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.logo{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:20px;
+}
+
+.logo img{
+  width:40px;
+  height:40px;
+  border-radius:8px;
+}
+
+.sidebar p{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px;
+  border-radius:10px;
+  cursor:pointer;
+  color:#94a3b8;
+  transition:all 0.3s ease;
+}
+
+.sidebar p:hover{
+  background:#1e293b;
+  color:#fff;
+  transform:translateX(6px);
+}
+
+/* Main Content */
+.main{
+  margin-left:260px;
+  padding:30px;
+}
+
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:25px;
+}
+
+.title{
+  font-size:24px;
+  font-weight:bold;
+}
+
+/* Stats */
+.stats{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:20px;
+  margin-bottom:30px;
+}
+
+.stat-card{
+  background:#020617;
+  padding:20px;
+  border-radius:14px;
+  transition:all 0.3s ease;
+}
+
+.stat-card:hover{
+  transform:translateY(-6px);
+  box-shadow:0 15px 25px rgba(0,0,0,0.4);
+}
+
+/* Cards */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:25px;
+}
+
+.card{
+  background:#020617;
+  padding:20px;
+  border-radius:14px;
+  transition:all 0.3s ease;
+}
+
+.card:hover{
+  transform:scale(1.04);
+}
+
+.card h3{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.link-btn{
+  color:#38bdf8;
+  cursor:pointer;
+  margin-top:12px;
+  display:inline-block;
+}
+
+/* Sections */
+.section{
+  display:none;
+  animation:fadeSlide 0.4s ease;
+}
+
 .active{display:block}
-@keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-input,button{padding:8px;border-radius:6px;border:none;margin:5px}
-button{background:#38bdf8;color:#000;cursor:pointer;transition:0.3s}
-button:hover{background:#0ea5e9}
+
+@keyframes fadeSlide{
+  from{opacity:0;transform:translateY(15px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* Inputs */
+input,button{
+  padding:10px;
+  border-radius:8px;
+  border:none;
+  margin:5px;
+}
+
+input{
+  width:260px;
+}
+
+button{
+  background:#38bdf8;
+  color:#000;
+  cursor:pointer;
+  transition:0.3s;
+}
+
+button:hover{
+  background:#0ea5e9;
+}
+
+/* Tabs */
+.tab-buttons{
+  margin-top:15px;
+  margin-bottom:15px;
+}
+
+.tab-buttons button{
+  margin-right:10px;
+}
+
 ul{padding-left:20px}
+
 </style>
 </head>
 <body>
 
 <div class="sidebar">
-<h2>⚡ SCORPION</h2>
-<p onclick="showSection('dashboard')"><i class="fa fa-chart-line"></i> Dashboard</p>
-<p onclick="showSection('scorpion')"><i class="fa fa-folder"></i> Scorpion Docs</p>
-<p onclick="showSection('projects')"><i class="fa fa-briefcase"></i> Projects</p>
-<p onclick="showSection('manpower')"><i class="fa fa-users"></i> Manpower</p>
-<p onclick="showSection('equipment')"><i class="fa fa-cogs"></i> Equipment</p>
+  <div class="logo">
+    <img src="https://via.placeholder.com/40" alt="logo">
+    <h3>Scorpion</h3>
+  </div>
+
+  <p onclick="showSection('dashboard')"><i class="fa fa-chart-line"></i> Dashboard</p>
+  <p onclick="showSection('scorpion')"><i class="fa fa-folder"></i> Scorpion Docs</p>
+  <p onclick="showSection('projects')"><i class="fa fa-briefcase"></i> Projects</p>
+  <p onclick="showSection('manpower')"><i class="fa fa-users"></i> Manpower</p>
+  <p onclick="showSection('equipment')"><i class="fa fa-cogs"></i> Equipment</p>
 </div>
 
 <div class="main">
@@ -99,7 +240,10 @@ ul{padding-left:20px}
 </div>
 
 <script>
-function showSection(id){document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
+function showSection(id){
+document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+document.getElementById(id).classList.add('active');
+}
 
 function addCompanyLink(){
 const link=document.getElementById('companyLink').value;
@@ -146,9 +290,11 @@ function openProject(i){
 const p=projects[i];
 const d=document.getElementById('projectDetails');
 d.innerHTML=`<h3>${p.name}</h3>
+<div class='tab-buttons'>
 <button onclick="showTab(${i},'invoices')">Invoices</button>
 <button onclick="showTab(${i},'jcc')">JCC</button>
 <button onclick="showTab(${i},'wo')">WO</button>
+</div>
 <div id='tab'></div>`;
 }
 
