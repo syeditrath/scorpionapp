@@ -5,81 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Scorpion Dashboard</title>
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f4f6f9;
-    }
-
-    .sidebar {
-      width: 220px;
-      height: 100vh;
-      background: #111827;
-      color: white;
-      position: fixed;
-      padding: 20px;
-    }
-
-    .sidebar h2 {
-      margin-bottom: 20px;
-    }
-
-    .sidebar p {
-      margin: 10px 0;
-      opacity: 0.7;
-    }
-
-    .main {
-      margin-left: 240px;
-      padding: 20px;
-    }
-
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
-
-    input, select {
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 15px;
-    }
-
-    .card {
-      background: white;
-      padding: 15px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      transition: 0.3s;
-    }
-
-    .card:hover {
-      transform: translateY(-5px);
-    }
-
-    .progress {
-      height: 8px;
-      background: #e5e7eb;
-      border-radius: 10px;
-      margin-top: 10px;
-    }
-
-    .progress-bar {
-      height: 8px;
-      background: #2563eb;
-      border-radius: 10px;
-    }
-
-    .equipment {
-      margin-top: 30px;
-    }
+    body { margin:0; font-family: Arial, sans-serif; background:#f4f6f9; }
+    .sidebar { width:220px; height:100vh; background:#111827; color:#fff; position:fixed; padding:20px; }
+    .sidebar h2{margin-bottom:20px}
+    .sidebar p{margin:10px 0; opacity:.7}
+    .main{ margin-left:240px; padding:20px }
+    .topbar{ display:flex; justify-content:space-between; gap:10px; margin-bottom:20px }
+    input,select,button{ padding:10px; border-radius:8px; border:1px solid #ccc }
+    button{ cursor:pointer; background:#2563eb; color:#fff; border:none }
+    .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:15px }
+    .card{ background:#fff; padding:15px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.1); transition:.3s }
+    .card:hover{ transform:translateY(-5px) }
+    .progress{ height:8px; background:#e5e7eb; border-radius:10px; margin-top:10px }
+    .progress-bar{ height:8px; background:#2563eb; border-radius:10px }
+    .equipment{ margin-top:30px }
+    .upload-box{ margin-top:20px; background:#fff; padding:15px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.1) }
+    .file-list li{ margin:5px 0 }
   </style>
 </head>
 <body>
@@ -95,95 +36,120 @@
 
   <div class="topbar">
     <input type="text" id="search" placeholder="Search projects...">
-
-    <select id="projectSelect">
-      <option value="">Select Project</option>
-    </select>
+    <select id="projectSelect"><option value="">Select Project</option></select>
+    <input type="file" id="excelFile" accept=".xlsx,.csv">
   </div>
 
   <div class="grid" id="projectGrid"></div>
 
   <div class="equipment" id="equipmentSection"></div>
 
+  <div class="upload-box">
+    <h3>Upload PDF</h3>
+    <input type="file" id="pdfUpload" accept="application/pdf">
+    <button onclick="savePDF()">Upload</button>
+    <ul id="fileList" class="file-list"></ul>
+  </div>
+
 </div>
 
 <script>
-  const projects = [
-    {
-      name: "Rastanura Project",
-      status: "Active",
-      progress: 70,
-      equipment: ["Excavator", "Crane", "Drill"]
-    },
-    {
-      name: "Dammam Phase 2",
-      status: "Delayed",
-      progress: 45,
-      equipment: ["Loader", "Bulldozer"]
-    }
-  ];
+let projects = JSON.parse(localStorage.getItem('projects')) || [
+  { name:"Rastanura Project", status:"Active", progress:70, equipment:["Excavator","Crane","Drill"] },
+  { name:"Dammam Phase 2", status:"Delayed", progress:45, equipment:["Loader","Bulldozer"] }
+];
 
-  const grid = document.getElementById("projectGrid");
-  const searchInput = document.getElementById("search");
-  const dropdown = document.getElementById("projectSelect");
-  const equipmentSection = document.getElementById("equipmentSection");
+const grid = document.getElementById("projectGrid");
+const searchInput = document.getElementById("search");
+const dropdown = document.getElementById("projectSelect");
+const equipmentSection = document.getElementById("equipmentSection");
 
-  function renderProjects(list) {
-    grid.innerHTML = "";
+function saveToStorage(){ localStorage.setItem('projects', JSON.stringify(projects)); }
 
-    list.forEach(p => {
-      const card = document.createElement("div");
-      card.className = "card";
-
-      card.innerHTML = `
-        <h3>${p.name}</h3>
-        <p>Status: ${p.status}</p>
-        <div class="progress">
-          <div class="progress-bar" style="width:${p.progress}%"></div>
-        </div>
-      `;
-
-      grid.appendChild(card);
-    });
-  }
-
-  function populateDropdown() {
-    projects.forEach(p => {
-      const option = document.createElement("option");
-      option.value = p.name;
-      option.textContent = p.name;
-      dropdown.appendChild(option);
-    });
-  }
-
-  function showEquipment(name) {
-    const project = projects.find(p => p.name === name);
-
-    if (!project) {
-      equipmentSection.innerHTML = "";
-      return;
-    }
-
-    equipmentSection.innerHTML = `
-      <h2>Equipment</h2>
-      <ul>
-        ${project.equipment.map(e => `<li>${e}</li>`).join("")}
-      </ul>
-    `;
-  }
-
-  searchInput.addEventListener("input", () => {
-    const value = searchInput.value.toLowerCase();
-    const filtered = projects.filter(p => p.name.toLowerCase().includes(value));
-    renderProjects(filtered);
+function renderProjects(list){
+  grid.innerHTML="";
+  list.forEach(p=>{
+    const card=document.createElement("div");
+    card.className="card";
+    card.innerHTML=`<h3>${p.name}</h3><p>Status:${p.status}</p><div class='progress'><div class='progress-bar' style='width:${p.progress}%'></div></div>`;
+    grid.appendChild(card);
   });
+}
 
-  dropdown.addEventListener("change", () => {
-    showEquipment(dropdown.value);
+function populateDropdown(){
+  dropdown.innerHTML='<option value="">Select Project</option>';
+  projects.forEach(p=>{
+    const option=document.createElement("option");
+    option.value=p.name;
+    option.textContent=p.name;
+    dropdown.appendChild(option);
   });
+}
 
-  renderProjects(projects);
-  populateDropdown();
+function showEquipment(name){
+  const project=projects.find(p=>p.name===name);
+  if(!project){ equipmentSection.innerHTML=""; return; }
+
+  equipmentSection.innerHTML=`<h2>Equipment</h2><ul>${project.equipment.map(e=>`<li>${e}</li>`).join("")}</ul>`;
+  loadFiles(name);
+}
+
+searchInput.addEventListener("input",()=>{
+  const value=searchInput.value.toLowerCase();
+  renderProjects(projects.filter(p=>p.name.toLowerCase().includes(value)));
+});
+
+dropdown.addEventListener("change",()=>showEquipment(dropdown.value));
+
+// PDF Upload
+function savePDF(){
+  const fileInput=document.getElementById("pdfUpload");
+  const file=fileInput.files[0];
+  if(!file || !dropdown.value) return alert("Select project + file");
+
+  const reader=new FileReader();
+  reader.onload=function(){
+    const data=JSON.parse(localStorage.getItem('files')||"{}");
+    if(!data[dropdown.value]) data[dropdown.value]=[];
+    data[dropdown.value].push({name:file.name,content:reader.result});
+    localStorage.setItem('files', JSON.stringify(data));
+    loadFiles(dropdown.value);
+  };
+  reader.readAsDataURL(file);
+}
+
+function loadFiles(projectName){
+  const list=document.getElementById("fileList");
+  const data=JSON.parse(localStorage.getItem('files')||"{}");
+  list.innerHTML="";
+  (data[projectName]||[]).forEach(f=>{
+    const li=document.createElement("li");
+    li.innerHTML=`<a href='${f.content}' target='_blank'>${f.name}</a>`;
+    list.appendChild(li);
+  });
+}
+
+// Excel/CSV import (simple CSV support)
+document.getElementById("excelFile").addEventListener("change",function(e){
+  const file=e.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(){
+    const text=reader.result;
+    const rows=text.split("\n").slice(1);
+    projects=rows.map(r=>{
+      const [name,status,progress]=r.split(",");
+      return { name, status, progress:parseInt(progress)||0, equipment:[] };
+    });
+    saveToStorage();
+    renderProjects(projects);
+    populateDropdown();
+  };
+  reader.readAsText(file);
+});
+
+renderProjects(projects);
+populateDropdown();
 </script>
 
 </body>
