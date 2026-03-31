@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scorpion Dashboard</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+    }
+
+    .sidebar {
+      width: 220px;
+      height: 100vh;
+      background: #111827;
+      color: white;
+      position: fixed;
+      padding: 20px;
+    }
+
+    .sidebar h2 {
+      margin-bottom: 20px;
+    }
+
+    .sidebar p {
+      margin: 10px 0;
+      opacity: 0.7;
+    }
+
+    .main {
+      margin-left: 240px;
+      padding: 20px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    input, select {
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+    }
+
+    .card {
+      background: white;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: 0.3s;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+    }
+
+    .progress {
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: #2563eb;
+      border-radius: 10px;
+    }
+
+    .equipment {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <h2>Dashboard</h2>
+  <p>Projects</p>
+  <p>Equipment</p>
+  <p>Reports</p>
+</div>
+
+<div class="main">
+
+  <div class="topbar">
+    <input type="text" id="search" placeholder="Search projects...">
+
+    <select id="projectSelect">
+      <option value="">Select Project</option>
+    </select>
+  </div>
+
+  <div class="grid" id="projectGrid"></div>
+
+  <div class="equipment" id="equipmentSection"></div>
+
+</div>
+
+<script>
+  const projects = [
+    {
+      name: "Rastanura Project",
+      status: "Active",
+      progress: 70,
+      equipment: ["Excavator", "Crane", "Drill"]
+    },
+    {
+      name: "Dammam Phase 2",
+      status: "Delayed",
+      progress: 45,
+      equipment: ["Loader", "Bulldozer"]
+    }
+  ];
+
+  const grid = document.getElementById("projectGrid");
+  const searchInput = document.getElementById("search");
+  const dropdown = document.getElementById("projectSelect");
+  const equipmentSection = document.getElementById("equipmentSection");
+
+  function renderProjects(list) {
+    grid.innerHTML = "";
+
+    list.forEach(p => {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      card.innerHTML = `
+        <h3>${p.name}</h3>
+        <p>Status: ${p.status}</p>
+        <div class="progress">
+          <div class="progress-bar" style="width:${p.progress}%"></div>
+        </div>
+      `;
+
+      grid.appendChild(card);
+    });
+  }
+
+  function populateDropdown() {
+    projects.forEach(p => {
+      const option = document.createElement("option");
+      option.value = p.name;
+      option.textContent = p.name;
+      dropdown.appendChild(option);
+    });
+  }
+
+  function showEquipment(name) {
+    const project = projects.find(p => p.name === name);
+
+    if (!project) {
+      equipmentSection.innerHTML = "";
+      return;
+    }
+
+    equipmentSection.innerHTML = `
+      <h2>Equipment</h2>
+      <ul>
+        ${project.equipment.map(e => `<li>${e}</li>`).join("")}
+      </ul>
+    `;
+  }
+
+  searchInput.addEventListener("input", () => {
+    const value = searchInput.value.toLowerCase();
+    const filtered = projects.filter(p => p.name.toLowerCase().includes(value));
+    renderProjects(filtered);
+  });
+
+  dropdown.addEventListener("change", () => {
+    showEquipment(dropdown.value);
+  });
+
+  renderProjects(projects);
+  populateDropdown();
+</script>
+
+</body>
+</html>
