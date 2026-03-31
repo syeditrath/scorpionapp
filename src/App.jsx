@@ -1,0 +1,1261 @@
+import { useState, useEffect } from "react";
+
+/* ─── Global CSS ─────────────────────────────────────────────────────────── */
+const GLOBAL_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700;800&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body, #root { height: 100%; }
+  body { font-family: 'Barlow', sans-serif; background: #080b10; color: #e8edf5; -webkit-font-smoothing: antialiased; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: #080b10; }
+  ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+  input, select, textarea, button { font-family: 'Barlow', sans-serif; }
+  button { cursor: pointer; }
+  @keyframes fadeUp  { from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);} }
+  @keyframes slideUp { from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);} }
+  @keyframes fadeIn  { from{opacity:0;}to{opacity:1;} }
+  @keyframes slideIn { from{opacity:0;transform:translateX(30px);}to{opacity:1;transform:translateX(0);} }
+  .fade-up  { animation: fadeUp  0.3s ease both; }
+  .slide-up { animation: slideUp 0.35s cubic-bezier(0.34,1.3,0.64,1) both; }
+  .fade-in  { animation: fadeIn  0.2s ease both; }
+  .slide-in { animation: slideIn 0.3s ease both; }
+`;
+
+/* ─── Theme ──────────────────────────────────────────────────────────────── */
+const T = {
+  bg:"#080b10", sidebar:"#0e1117", card:"#0e1117", card2:"#111620", cardHover:"#131820",
+  border:"#1e293b", borderLight:"#253147",
+  text:"#f1f5fb", textSub:"#8899b0", textMuted:"#3d5068",
+  blue:"#38bdf8", green:"#34d399", gold:"#fbbf24", red:"#f87171",
+  purple:"#a78bfa", teal:"#2dd4bf", orange:"#fb923c",
+  blueDim:"rgba(56,189,248,0.1)", greenDim:"rgba(52,211,153,0.1)",
+  goldDim:"rgba(251,191,36,0.1)", redDim:"rgba(248,113,113,0.1)",
+  purpleDim:"rgba(167,139,250,0.1)", tealDim:"rgba(45,212,191,0.1)",
+  orangeDim:"rgba(251,146,60,0.1)",
+  inputBg:"#080b10", shadow:"0 4px 24px rgba(0,0,0,0.5)",
+};
+
+/* ─── Helpers ────────────────────────────────────────────────────────────── */
+const uid       = () => Math.random().toString(36).slice(2,9);
+const daysUntil = d  => d ? Math.ceil((new Date(d) - new Date()) / 86400000) : null;
+const fmtDate   = d  => d ? new Date(d).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "—";
+
+function getStatus(days) {
+  if (days === null) return { label:"Unknown",       color:T.textMuted, bg:"rgba(61,80,104,.15)" };
+  if (days < 0)      return { label:"Expired",       color:T.red,       bg:T.redDim };
+  if (days <= 90)    return { label:"Expiring Soon", color:T.gold,      bg:T.goldDim };
+  return               { label:"Valid",            color:T.green,     bg:T.greenDim };
+}
+
+/* ─── Default data ───────────────────────────────────────────────────────── */
+const DEFAULT_SCORPION_CATS = [
+  "Company Registration / CR",
+  "Insurance Policies",
+  "Trade Licenses",
+  "Contracts & Agreements",
+  "IBAN",
+  "Other",
+];
+
+const DEFAULT_MANPOWER_CATS = [
+  "Drillers / Operators",
+  "Safety Officers (HSE)",
+  "Supervisors",
+  "Laborers / General Workers",
+];
+
+const EMPTY_DATA = {
+  scorpionDocs: [],   // { id, category, name, docNo, issueDate, expiryDate, fileLink, notes }
+  manpowerCats: DEFAULT_MANPOWER_CATS,
+  manpower: [],       // { id, category, name, idNo, nationality, designation,
+                      //   passportNo, passportExpiry, visaNo, visaExpiry,
+                      //   iqamaNo, iqamaExpiry, muqeemNo, muqeemExpiry,
+                      //   certs: [{id,name,certNo,issueDate,expiryDate,fileLink}],
+                      //   docs:  [{id,type,docNo,expiryDate,fileLink}]  }
+  equipment: [],      // { id, name, model, serialNo, status, operator, project,
+                      //   purchaseDate, notes,
+                      //   certifications:[{id,certNo,issuedBy,issueDate,expiryDate,fileLink}],
+                      //   invoices:      [{id,invoiceNo,supplier,amount,date,fileLink}],
+                      //   insurance:     [{id,policyNo,insurer,type,issueDate,expiryDate,fileLink}],
+                      //   permits:       [{id,permitNo,type,issuedBy,issueDate,expiryDate,fileLink}] }
+  scorpionDocCats: DEFAULT_SCORPION_CATS,
+  projects: ["NEOM Phase 1","NEOM Phase 2","Riyadh Metro"],
+};
+
+function loadData() {
+  try { const d = localStorage.getItem("cta_v1"); return d ? JSON.parse(d) : EMPTY_DATA; }
+  catch { return EMPTY_DATA; }
+}
+function persist(data) { try { localStorage.setItem("cta_v1", JSON.stringify(data)); } catch {} }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   ROOT APP
+════════════════════════════════════════════════════════════════════════════ */
+export default function App() {
+  useEffect(() => {
+    if (!document.getElementById("ct-g")) {
+      const s = document.createElement("style"); s.id = "ct-g";
+      s.textContent = GLOBAL_CSS; document.head.appendChild(s);
+    }
+  }, []);
+
+  const [data,     setData]     = useState(loadData);
+  const [page,     setPage]     = useState("dashboard"); // dashboard | scorpion | manpower | equipment
+  const [sideOpen, setSideOpen] = useState(false);
+  const [toast,    setToast]    = useState(null);
+
+  useEffect(() => { persist(data); }, [data]);
+
+  const showToast = (msg, type="ok") => { setToast({msg,type}); setTimeout(() => setToast(null), 3200); };
+
+  const go = p => { setPage(p); setSideOpen(false); };
+
+  /* ── expiry alerts across everything ── */
+  const allExpiries = [
+    ...data.scorpionDocs.filter(d=>d.expiryDate).map(d=>({label:d.name,src:"Company Doc",days:daysUntil(d.expiryDate)})),
+    ...data.manpower.flatMap(p=>[
+      p.passportExpiry && {label:p.name,src:"Passport",    days:daysUntil(p.passportExpiry)},
+      p.visaExpiry     && {label:p.name,src:"Visa",        days:daysUntil(p.visaExpiry)},
+      p.iqamaExpiry    && {label:p.name,src:"Iqama",       days:daysUntil(p.iqamaExpiry)},
+      p.muqeemExpiry   && {label:p.name,src:"Muqeem",      days:daysUntil(p.muqeemExpiry)},
+      ...(p.certs||[]).map(c=>({label:`${p.name} — ${c.name}`,src:"Cert",days:daysUntil(c.expiryDate)})),
+    ].filter(Boolean)),
+    ...data.equipment.flatMap(e=>[
+      ...(e.certifications||[]).map(c=>({label:`${e.name} — ${c.certNo||"Cert"}`,src:"Eq Cert",days:daysUntil(c.expiryDate)})),
+      ...(e.insurance||[]).map(c=>({label:`${e.name} — Insurance`,src:"Insurance",days:daysUntil(c.expiryDate)})),
+      ...(e.permits||[]).map(c=>({label:`${e.name} — ${c.type||"Permit"}`,src:"Permit",days:daysUntil(c.expiryDate)})),
+    ]),
+  ].filter(x=>x.days!==null&&x.days<=90).sort((a,b)=>a.days-b.days);
+
+  return (
+    <div style={{display:"flex",height:"100vh",overflow:"hidden",background:T.bg}}>
+      {sideOpen && <div className="fade-in" onClick={()=>setSideOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:49}}/>}
+
+      <Sidebar page={page} go={go} sideOpen={sideOpen} alerts={allExpiries.length} data={data} />
+
+      <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0}}>
+        {/* ── Top bar ── */}
+        <header style={{background:T.sidebar,borderBottom:`1px solid ${T.border}`,padding:"0 20px",flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"center",height:64,position:"relative"}}>
+            <button onClick={()=>setSideOpen(true)} style={{background:T.card,border:`1px solid ${T.border}`,color:T.textSub,borderRadius:8,width:40,height:40,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0,zIndex:1}}>☰</button>
+            <div style={{position:"absolute",left:0,right:0,textAlign:"center",pointerEvents:"none"}}>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:24,color:T.text,letterSpacing:"3px"}}>SCORPION ARABIA</div>
+              <div style={{fontSize:11,color:T.textMuted,letterSpacing:"1.5px",marginTop:1}}>DOCUMENT & ASSET MANAGER</div>
+            </div>
+            {allExpiries.length>0 && (
+              <div style={{marginLeft:"auto",zIndex:1}}>
+                <div style={{background:T.redDim,border:`1px solid ${T.red}44`,color:T.red,borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+                  ▲ <span style={{background:T.red,color:"#fff",borderRadius:999,padding:"1px 7px",fontSize:11,fontWeight:700}}>{allExpiries.length}</span> alerts
+                </div>
+              </div>
+            )}
+          </div>
+        </header>
+
+        <main style={{flex:1,overflowY:"auto",padding:"24px 20px"}}>
+          {page==="dashboard" && <Dashboard data={data} alerts={allExpiries} go={go}/>}
+          {page==="scorpion"  && <ScorpionDocs data={data} setData={setData} showToast={showToast}/>}
+          {page==="manpower"  && <ManpowerPage data={data} setData={setData} showToast={showToast}/>}
+          {page==="equipment" && <EquipmentPage data={data} setData={setData} showToast={showToast}/>}
+        </main>
+      </div>
+
+      {toast && (
+        <div className="fade-up" style={{position:"fixed",bottom:24,right:24,zIndex:999,background:toast.type==="del"?"#130a0a":"#081310",border:`1px solid ${toast.type==="del"?T.red:T.green}`,color:toast.type==="del"?T.red:T.green,borderRadius:10,padding:"12px 20px",fontSize:14,fontWeight:600,boxShadow:T.shadow,display:"flex",alignItems:"center",gap:10}}>
+          {toast.type==="del"?"✕":"✓"} {toast.msg}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SIDEBAR
+════════════════════════════════════════════════════════════════════════════ */
+function Sidebar({page,go,sideOpen,alerts,data}) {
+  const isMobile = window.innerWidth < 900;
+  const NAV = [
+    {id:"dashboard", icon:"▦", label:"Dashboard",          desc:"Overview"},
+    {id:"scorpion",  icon:"◉", label:"Scorpion Documents", desc:"Company docs & licenses"},
+    {id:"manpower",  icon:"◈", label:"Manpower",           desc:"Staff & certifications"},
+    {id:"equipment", icon:"◎", label:"Equipment",          desc:"Assets & records"},
+  ];
+  return (
+    <aside style={{width:255,flexShrink:0,background:T.sidebar,borderRight:`1px solid ${T.border}`,display:"flex",flexDirection:"column",zIndex:50,position:isMobile?"fixed":"relative",top:0,left:0,height:"100%",transform:isMobile?(sideOpen?"translateX(0)":"translateX(-100%)"):"none",transition:"transform .28s ease"}}>
+      <div style={{padding:"22px 20px 18px",borderBottom:`1px solid ${T.border}`}}>
+        <div style={{display:"flex",alignItems:"center",gap:14}}>
+          <img src="logo.png" alt="Scorpion Arabia" style={{width:56,height:56,borderRadius:10,objectFit:"cover",background:"#000",flexShrink:0}}/>
+          <div>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:22,color:T.text,letterSpacing:".5px",lineHeight:1.1}}>SCORPION ARABIA</div>
+            <div style={{fontSize:11,color:T.textMuted,fontWeight:600,letterSpacing:"1.4px",marginTop:3}}>ASSET MANAGER</div>
+          </div>
+        </div>
+      </div>
+      <nav style={{padding:"14px 10px",flex:1,overflowY:"auto"}}>
+        {NAV.map(n=>{
+          const active=page===n.id;
+          const badge=n.id==="dashboard"?alerts:0;
+          return (
+            <button key={n.id} onClick={()=>go(n.id)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"11px 12px",borderRadius:8,border:"none",marginBottom:3,textAlign:"left",background:active?T.blueDim:"transparent",borderLeft:`2px solid ${active?T.blue:"transparent"}`,transition:"all .15s"}}>
+              <span style={{fontSize:20,color:active?T.blue:T.textMuted}}>{n.icon}</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:600,color:active?T.blue:T.text}}>{n.label}</div>
+                <div style={{fontSize:10,color:T.textMuted,marginTop:1}}>{n.desc}</div>
+              </div>
+              {badge>0&&<span style={{background:T.red,color:"#fff",borderRadius:999,padding:"1px 7px",fontSize:10,fontWeight:700}}>{badge}</span>}
+            </button>
+          );
+        })}
+      </nav>
+      <div style={{padding:"12px 18px 20px",borderTop:`1px solid ${T.border}`,fontSize:10,color:T.textMuted,textAlign:"center"}}>Scorpion Arabia © 2025</div>
+    </aside>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   DASHBOARD
+════════════════════════════════════════════════════════════════════════════ */
+function Dashboard({data,alerts,go}) {
+  /* ── computed stats ── */
+  const scorpionExp = data.scorpionDocs.filter(d=>{ const x=daysUntil(d.expiryDate); return x!==null&&x<=90; }).length;
+  const scorpionExp30 = data.scorpionDocs.filter(d=>{ const x=daysUntil(d.expiryDate); return x!==null&&x<=30; }).length;
+
+  const mpPeople = data.manpower.length;
+  const mpCats   = data.manpowerCats.length;
+  const mpDocAlerts = data.manpower.reduce((n,p)=>{
+    const ds=[p.passportExpiry,p.visaExpiry,p.iqamaExpiry,p.muqeemExpiry,...(p.certs||[]).map(c=>c.expiryDate)];
+    return n + ds.filter(d=>{ const x=daysUntil(d); return x!==null&&x<=90; }).length;
+  },0);
+
+  const eqTotal  = data.equipment.length;
+  const eqActive = data.equipment.filter(e=>e.status==="Active").length;
+  const eqMaint  = data.equipment.filter(e=>e.status==="Under Maintenance").length;
+  const eqExp    = data.equipment.reduce((n,e)=>{
+    const ds=[...(e.certifications||[]).map(c=>c.expiryDate),...(e.insurance||[]).map(c=>c.expiryDate),...(e.permits||[]).map(c=>c.expiryDate)];
+    return n + ds.filter(d=>{ const x=daysUntil(d); return x!==null&&x<=90; }).length;
+  },0);
+
+  const totalAlerts  = alerts.length;
+  const overdueCount = alerts.filter(a=>a.days<0).length;
+  const expiring30   = alerts.filter(a=>a.days>=0&&a.days<=30).length;
+
+  /* ── compliance pct (items with expiry tracked) ── */
+  const allTracked = [
+    ...data.scorpionDocs.filter(d=>d.expiryDate).map(d=>daysUntil(d.expiryDate)),
+    ...data.manpower.flatMap(p=>[p.passportExpiry,p.visaExpiry,p.iqamaExpiry,p.muqeemExpiry,...(p.certs||[]).map(c=>c.expiryDate)].filter(Boolean).map(daysUntil)),
+    ...data.equipment.flatMap(e=>[...(e.certifications||[]),...(e.insurance||[]),...(e.permits||[])].map(r=>daysUntil(r.expiryDate))),
+  ];
+  const validCount = allTracked.filter(d=>d!==null&&d>0).length;
+  const pct = allTracked.length ? Math.round(validCount/allTracked.length*100) : 100;
+
+  const expired  = alerts.filter(a=>a.days<0).sort((a,b)=>a.days-b.days);
+  const expiring = alerts.filter(a=>a.days>=0).sort((a,b)=>a.days-b.days);
+
+  return (
+    <div style={{maxWidth:1100,margin:"0 auto"}}>
+
+      {/* ── Top KPI strip ── */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:20}}>
+        {[
+          {label:"Total Alerts",    v:totalAlerts,  color:totalAlerts>0?T.red:T.green,  icon:"▲"},
+          {label:"Overdue",         v:overdueCount, color:overdueCount>0?T.red:T.textMuted, icon:"✕"},
+          {label:"Due in 30 Days",  v:expiring30,   color:expiring30>0?T.gold:T.textMuted,  icon:"⏱"},
+          {label:"Compliance",      v:`${pct}%`,    color:pct>=80?T.green:pct>=60?T.gold:T.red, icon:"◎"},
+          {label:"People",          v:mpPeople,     color:T.green,  icon:"◈"},
+          {label:"Equipment Assets",v:eqTotal,      color:T.gold,   icon:"◎"},
+        ].map((k,i)=>(
+          <div key={k.label} className="fade-up" style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:12,padding:"16px 18px",animationDelay:`${i*.05}s`,position:"relative",overflow:"hidden"}}>
+            <div style={{position:"absolute",top:10,right:14,fontSize:26,color:k.color,opacity:.08,fontWeight:800}}>{k.icon}</div>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:34,fontWeight:800,color:k.color,lineHeight:1}}>{k.v}</div>
+            <div style={{fontSize:11,color:T.textMuted,marginTop:5,fontWeight:500}}>{k.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Compliance bar ── */}
+      <div className="fade-up" style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:14,padding:"16px 20px",marginBottom:18,animationDelay:".3s"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:14,color:T.textSub,letterSpacing:".5px"}}>OVERALL COMPLIANCE</span>
+          <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:22,color:pct>=80?T.green:pct>=60?T.gold:T.red}}>{pct}%</span>
+        </div>
+        <div style={{height:8,background:T.border,borderRadius:999}}>
+          <div style={{height:"100%",width:`${pct}%`,borderRadius:999,transition:"width .8s ease",background:pct>=80?`linear-gradient(90deg,${T.green},#059669)`:pct>=60?`linear-gradient(90deg,${T.gold},#d97706)`:`linear-gradient(90deg,${T.red},#dc2626)`}}/>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:6,fontSize:11,color:T.textMuted}}>
+          <span>{validCount} valid of {allTracked.length} tracked items</span>
+          <span>{overdueCount>0?`${overdueCount} overdue`:"No overdue items"}</span>
+        </div>
+      </div>
+
+      {/* ── 3 section cards ── */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))",gap:14,marginBottom:20}}>
+
+        {/* Scorpion Documents */}
+        <div className="fade-up" onClick={()=>go("scorpion")}
+          style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:16,padding:"20px",cursor:"pointer",animationDelay:".35s",transition:"border-color .2s,transform .2s"}}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor=T.blue;e.currentTarget.style.transform="translateY(-2px)";}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.transform="none";}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+            <div style={{width:38,height:38,background:T.blueDim,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:T.blue}}>◉</div>
+            <div>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:16,color:T.text}}>SCORPION DOCUMENTS</div>
+              <div style={{fontSize:11,color:T.textMuted}}>CR, insurance, licenses, contracts</div>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+            {[["Total Docs",data.scorpionDocs.length,T.blue],["Expiring",scorpionExp,scorpionExp>0?T.red:T.textMuted],["Due in 30d",scorpionExp30,scorpionExp30>0?T.gold:T.textMuted],["Categories",(data.scorpionDocCats||[]).length,T.blue]].map(([l,v,c])=>(
+              <div key={l} style={{background:T.bg,borderRadius:8,padding:"10px 12px"}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:800,color:c,lineHeight:1}}>{v}</div>
+                <div style={{fontSize:10,color:T.textMuted,marginTop:3}}>{l}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{fontSize:12,color:T.blue,fontWeight:600,textAlign:"right"}}>Open Documents →</div>
+        </div>
+
+        {/* Manpower */}
+        <div className="fade-up" onClick={()=>go("manpower")}
+          style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:16,padding:"20px",cursor:"pointer",animationDelay:".42s",transition:"border-color .2s,transform .2s"}}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor=T.green;e.currentTarget.style.transform="translateY(-2px)";}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.transform="none";}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+            <div style={{width:38,height:38,background:T.greenDim,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:T.green}}>◈</div>
+            <div>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:16,color:T.text}}>MANPOWER</div>
+              <div style={{fontSize:11,color:T.textMuted}}>Staff, documents & certifications</div>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+            {[["People",mpPeople,T.green],["Categories",mpCats,T.green],["Doc Alerts",mpDocAlerts,mpDocAlerts>0?T.red:T.textMuted],["Certs",data.manpower.reduce((n,p)=>n+(p.certs||[]).length,0),T.green]].map(([l,v,c])=>(
+              <div key={l} style={{background:T.bg,borderRadius:8,padding:"10px 12px"}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:800,color:c,lineHeight:1}}>{v}</div>
+                <div style={{fontSize:10,color:T.textMuted,marginTop:3}}>{l}</div>
+              </div>
+            ))}
+          </div>
+          {/* Category breakdown */}
+          <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:10}}>
+            {(data.manpowerCats||[]).map(c=>(
+              <span key={c} style={{background:T.greenDim,color:T.green,borderRadius:5,padding:"2px 8px",fontSize:10,fontWeight:600}}>
+                {c} ({data.manpower.filter(p=>p.category===c).length})
+              </span>
+            ))}
+          </div>
+          <div style={{fontSize:12,color:T.green,fontWeight:600,textAlign:"right"}}>Open Manpower →</div>
+        </div>
+
+        {/* Equipment */}
+        <div className="fade-up" onClick={()=>go("equipment")}
+          style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:16,padding:"20px",cursor:"pointer",animationDelay:".49s",transition:"border-color .2s,transform .2s"}}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor=T.gold;e.currentTarget.style.transform="translateY(-2px)";}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.transform="none";}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+            <div style={{width:38,height:38,background:T.goldDim,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:T.gold}}>◎</div>
+            <div>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:16,color:T.text}}>EQUIPMENT</div>
+              <div style={{fontSize:11,color:T.textMuted}}>Assets, certs, invoices & permits</div>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+            {[["Total Assets",eqTotal,T.gold],["Active",eqActive,T.green],["Maintenance",eqMaint,eqMaint>0?T.gold:T.textMuted],["Exp. Alerts",eqExp,eqExp>0?T.red:T.textMuted]].map(([l,v,c])=>(
+              <div key={l} style={{background:T.bg,borderRadius:8,padding:"10px 12px"}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:800,color:c,lineHeight:1}}>{v}</div>
+                <div style={{fontSize:10,color:T.textMuted,marginTop:3}}>{l}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+            {[["📜 Certs",data.equipment.reduce((n,e)=>n+(e.certifications||[]).length,0)],["🧾 Invoices",data.equipment.reduce((n,e)=>n+(e.invoices||[]).length,0)],["🛡 Insurance",data.equipment.reduce((n,e)=>n+(e.insurance||[]).length,0)],["⬡ Permits",data.equipment.reduce((n,e)=>n+(e.permits||[]).length,0)]].map(([l,v])=>(
+              <span key={l} style={{background:T.goldDim,color:T.gold,borderRadius:5,padding:"2px 8px",fontSize:10,fontWeight:600}}>{l}: {v}</span>
+            ))}
+          </div>
+          <div style={{fontSize:12,color:T.gold,fontWeight:600,textAlign:"right"}}>Open Equipment →</div>
+        </div>
+      </div>
+
+      {/* ── Alerts split into 2 columns ── */}
+      {alerts.length>0 ? (
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+          {/* Overdue */}
+          <div className="fade-up" style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:14,padding:"18px 20px",animationDelay:".55s"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+              <div style={{width:3,height:18,borderRadius:2,background:T.red}}/>
+              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:14,color:T.red,letterSpacing:".5px"}}>OVERDUE</span>
+              <span style={{background:T.redDim,color:T.red,borderRadius:999,padding:"1px 8px",fontSize:11,fontWeight:700}}>{expired.length}</span>
+            </div>
+            {expired.length===0
+              ?<div style={{textAlign:"center",padding:"20px",color:T.textMuted,fontSize:13}}>✓ Nothing overdue</div>
+              :<div style={{display:"grid",gap:7}}>
+                {expired.slice(0,8).map((a,i)=><AlertRow key={i} a={a}/>)}
+                {expired.length>8&&<div style={{fontSize:11,color:T.textMuted,textAlign:"center",paddingTop:4}}>+{expired.length-8} more — check Alerts page</div>}
+              </div>
+            }
+          </div>
+
+          {/* Expiring soon */}
+          <div className="fade-up" style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:14,padding:"18px 20px",animationDelay:".62s"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+              <div style={{width:3,height:18,borderRadius:2,background:T.gold}}/>
+              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:14,color:T.gold,letterSpacing:".5px"}}>EXPIRING SOON</span>
+              <span style={{background:T.goldDim,color:T.gold,borderRadius:999,padding:"1px 8px",fontSize:11,fontWeight:700}}>{expiring.length}</span>
+            </div>
+            {expiring.length===0
+              ?<div style={{textAlign:"center",padding:"20px",color:T.textMuted,fontSize:13}}>✓ Nothing expiring soon</div>
+              :<div style={{display:"grid",gap:7}}>
+                {expiring.slice(0,8).map((a,i)=><AlertRow key={i} a={a}/>)}
+                {expiring.length>8&&<div style={{fontSize:11,color:T.textMuted,textAlign:"center",paddingTop:4}}>+{expiring.length-8} more</div>}
+              </div>
+            }
+          </div>
+        </div>
+      ) : (
+        <div className="fade-up" style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:14,padding:"40px 20px",textAlign:"center",animationDelay:".55s"}}>
+          <div style={{fontSize:44,marginBottom:12}}>✓</div>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:22,color:T.green,marginBottom:6}}>ALL CLEAR</div>
+          <div style={{fontSize:13,color:T.textMuted}}>No expiring or overdue items — everything is up to date.</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AlertRow({a}) {
+  const s=getStatus(a.days);
+  const SRC_COLOR={"Company Doc":T.blue,"Passport":T.purple,"Visa":T.teal,"Iqama":T.green,"Muqeem":T.orange,"Cert":T.green,"Eq Cert":T.blue,"Insurance":T.purple,"Permit":T.gold};
+  const sc=SRC_COLOR[a.src]||T.blue;
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:T.bg,borderRadius:9,border:`1px solid ${T.border}`}}>
+      <div style={{width:3,height:32,borderRadius:2,background:s.color,flexShrink:0}}/>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:12,fontWeight:600,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.label}</div>
+        <div style={{display:"flex",alignItems:"center",gap:5,marginTop:2}}>
+          <span style={{background:`${sc}18`,color:sc,borderRadius:4,padding:"0px 6px",fontSize:9,fontWeight:700}}>{a.src}</span>
+          {a.project&&<span style={{fontSize:10,color:T.textMuted}}>{a.project}</span>}
+        </div>
+      </div>
+      <div style={{textAlign:"right",flexShrink:0}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:18,color:s.color,lineHeight:1}}>{Math.abs(a.days)}</div>
+        <div style={{fontSize:8,color:T.textMuted,fontWeight:600,letterSpacing:".3px"}}>{a.days<0?"OVERDUE":"DAYS LEFT"}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SCORPION DOCUMENTS
+════════════════════════════════════════════════════════════════════════════ */
+function ScorpionDocs({data,setData,showToast}) {
+  const [modal,    setModal]    = useState(null);
+  const [catModal, setCatModal] = useState(false);
+  const [selCat,   setSelCat]   = useState("All");
+
+  const docs    = data.scorpionDocs || [];
+  const cats    = data.scorpionDocCats || DEFAULT_SCORPION_CATS;
+  const visible = selCat==="All" ? docs : docs.filter(d=>d.category===selCat);
+
+  const saveDoc = (doc, mode) => {
+    setData(prev => {
+      const list = [...prev.scorpionDocs];
+      if (mode==="add") list.push({...doc, id:uid()});
+      else { const i=list.findIndex(d=>d.id===doc.id); if(i>=0) list[i]=doc; }
+      return {...prev, scorpionDocs:list};
+    });
+    showToast(mode==="add"?"Document added":"Document updated");
+    setModal(null);
+  };
+
+  const delDoc = id => {
+    setData(prev=>({...prev, scorpionDocs:prev.scorpionDocs.filter(d=>d.id!==id)}));
+    showToast("Document deleted","del");
+  };
+
+  const saveCats = cats => setData(prev=>({...prev, scorpionDocCats:cats}));
+
+  return (
+    <div style={{maxWidth:1000,margin:"0 auto"}}>
+      <PageHeader title="SCORPION DOCUMENTS" sub="Company licenses, insurance, contracts & registrations" color={T.blue}>
+        <Btn color={T.blue} onClick={()=>setCatModal(true)}>⊕ Categories</Btn>
+        <Btn color={T.blue} solid onClick={()=>setModal({mode:"add"})}>+ Add Document</Btn>
+      </PageHeader>
+
+      {/* Category filter pills */}
+      <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap"}}>
+        {["All",...cats].map(c=>(
+          <button key={c} onClick={()=>setSelCat(c)} style={{padding:"6px 14px",borderRadius:999,border:`1px solid ${selCat===c?T.blue:T.border}`,background:selCat===c?T.blueDim:"transparent",color:selCat===c?T.blue:T.textSub,fontSize:12,fontWeight:selCat===c?700:500,transition:"all .15s"}}>
+            {c} {c!=="All"&&<span style={{opacity:.6}}>({docs.filter(d=>d.category===c).length})</span>}
+          </button>
+        ))}
+      </div>
+
+      {visible.length===0
+        ?<Empty icon="◉" label="No documents yet" sub="Add your first company document" color={T.blue} onAdd={()=>setModal({mode:"add"})}/>
+        :<div style={{display:"grid",gap:10}}>
+          {visible.map((doc,i)=>{
+            const s=getStatus(daysUntil(doc.expiryDate));
+            return (
+              <div key={doc.id} className="fade-up" style={{background:T.card,border:`1px solid ${T.border}`,borderLeft:`4px solid ${doc.expiryDate?s.color:T.blue}`,borderRadius:12,padding:"16px 18px",animationDelay:`${i*.03}s`,display:"flex",alignItems:"center",gap:14}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:5}}>
+                    <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:16,color:T.text}}>{doc.name}</span>
+                    <Tag color={T.blue}>{doc.category}</Tag>
+                    {doc.expiryDate&&<Tag color={s.color}>{s.label}</Tag>}
+                  </div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                    {doc.docNo&&<Chip>Ref: {doc.docNo}</Chip>}
+                    {doc.issueDate&&<Chip>Issued: {fmtDate(doc.issueDate)}</Chip>}
+                    {doc.expiryDate&&<Chip color={s.color}>Expires: {fmtDate(doc.expiryDate)}</Chip>}
+                    {doc.fileLink&&<FileLink href={doc.fileLink}/>}
+                  </div>
+                  {doc.notes&&<div style={{marginTop:6,fontSize:12,color:T.textMuted,fontStyle:"italic"}}>{doc.notes}</div>}
+                </div>
+                <div style={{display:"flex",gap:6,flexShrink:0}}>
+                  <ABtn color={T.blue} onClick={()=>setModal({mode:"edit",doc})}>✎</ABtn>
+                  <ABtn color={T.red}  onClick={()=>delDoc(doc.id)}>✕</ABtn>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      }
+
+      {modal    && <DocModal mode={modal.mode} doc={modal.doc} cats={cats} onClose={()=>setModal(null)} onSave={saveDoc}/>}
+      {catModal && <CatManagerModal title="Document Categories" cats={cats} onSave={saveCats} onClose={()=>setCatModal(false)}/>}
+    </div>
+  );
+}
+
+function DocModal({mode,doc,cats,onClose,onSave}) {
+  const [f,setF]=useState(doc||{});
+  const F=(k,label,type)=>({key:k,label,type:type||"text"});
+  const fields=[F("name","Document Name"),F("category","Category","select"),F("docNo","Reference / Doc No."),F("issueDate","Issue Date","date"),F("expiryDate","Expiry Date","date"),F("fileLink","File Link (Google Drive / SharePoint)","link"),F("notes","Notes","textarea")];
+  return (
+    <FormModal title={`${mode==="add"?"ADD":"EDIT"} DOCUMENT`} color={T.blue} onClose={onClose}
+      onSave={()=>{if(!f.name){alert("Document name is required");return;}onSave(f,mode);}}>
+      {fields.map(fl=>(
+        <FieldRow key={fl.key} label={fl.label}>
+          {fl.type==="select"
+            ?<FSelect value={f[fl.key]||""} onChange={v=>setF(p=>({...p,[fl.key]:v}))} color={T.blue}>
+                <option value="">Select…</option>
+                {cats.map(c=><option key={c} value={c}>{c}</option>)}
+              </FSelect>
+            :fl.type==="textarea"
+              ?<FTextarea value={f[fl.key]||""} onChange={v=>setF(p=>({...p,[fl.key]:v}))} color={T.blue}/>
+              :fl.type==="link"
+                ?<FLink value={f[fl.key]||""} onChange={v=>setF(p=>({...p,[fl.key]:v}))}/>
+                :<FInput type={fl.type} value={f[fl.key]||""} onChange={v=>setF(p=>({...p,[fl.key]:v}))} color={T.blue}/>
+          }
+        </FieldRow>
+      ))}
+    </FormModal>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   MANPOWER PAGE
+════════════════════════════════════════════════════════════════════════════ */
+function ManpowerPage({data,setData,showToast}) {
+  const [selCat,   setSelCat]   = useState("All");
+  const [catModal, setCatModal] = useState(false);
+  const [addModal, setAddModal] = useState(false);
+  const [person,   setPerson]   = useState(null); // selected person detail view
+
+  const people  = data.manpower || [];
+  const cats    = data.manpowerCats || DEFAULT_MANPOWER_CATS;
+  const visible = selCat==="All" ? people : people.filter(p=>p.category===selCat);
+
+  const savePerson = (p,mode) => {
+    setData(prev=>{
+      const list=[...prev.manpower];
+      if(mode==="add"){list.push({...p,id:uid(),certs:[],docs:[]});}
+      else{const i=list.findIndex(x=>x.id===p.id);if(i>=0)list[i]=p;}
+      return{...prev,manpower:list};
+    });
+    showToast(mode==="add"?"Person added":"Updated");
+    setAddModal(false);
+    if(person) setPerson(p); // refresh detail
+  };
+
+  const delPerson = id => {
+    setData(prev=>({...prev,manpower:prev.manpower.filter(p=>p.id!==id)}));
+    showToast("Deleted","del"); setPerson(null);
+  };
+
+  const saveCats = cats => setData(prev=>({...prev,manpowerCats:cats}));
+
+  // update person record in place (for adding certs/docs from detail view)
+  const updatePerson = updated => {
+    setData(prev=>{
+      const list=[...prev.manpower];
+      const i=list.findIndex(p=>p.id===updated.id);
+      if(i>=0)list[i]=updated;
+      return{...prev,manpower:list};
+    });
+    setPerson(updated);
+  };
+
+  if (person) {
+    const fresh = data.manpower.find(p=>p.id===person.id)||person;
+    return <PersonDetail person={fresh} cats={cats} onBack={()=>setPerson(null)} onUpdate={updatePerson} onDelete={()=>delPerson(fresh.id)} onEdit={()=>setAddModal({mode:"edit",person:fresh})} showToast={showToast}/>;
+  }
+
+  return (
+    <div style={{maxWidth:1000,margin:"0 auto"}}>
+      <PageHeader title="MANPOWER" sub="Staff profiles, documents & certifications" color={T.green}>
+        <Btn color={T.green} onClick={()=>setCatModal(true)}>⊕ Categories</Btn>
+        <Btn color={T.green} solid onClick={()=>setAddModal({mode:"add"})}>+ Add Person</Btn>
+      </PageHeader>
+
+      {/* Category filter */}
+      <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap"}}>
+        {["All",...cats].map(c=>(
+          <button key={c} onClick={()=>setSelCat(c)} style={{padding:"6px 14px",borderRadius:999,border:`1px solid ${selCat===c?T.green:T.border}`,background:selCat===c?T.greenDim:"transparent",color:selCat===c?T.green:T.textSub,fontSize:12,fontWeight:selCat===c?700:500,transition:"all .15s"}}>
+            {c} {c!=="All"&&<span style={{opacity:.6}}>({people.filter(p=>p.category===c).length})</span>}
+          </button>
+        ))}
+      </div>
+
+      {visible.length===0
+        ?<Empty icon="◈" label="No people in this category" sub="Add your first team member" color={T.green} onAdd={()=>setAddModal({mode:"add"})}/>
+        :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:12}}>
+          {visible.map((p,i)=>{
+            const exps=[p.passportExpiry,p.visaExpiry,p.iqamaExpiry,p.muqeemExpiry,...(p.certs||[]).map(c=>c.expiryDate)].filter(Boolean);
+            const critical=exps.filter(d=>{ const x=daysUntil(d); return x!==null&&x<=90; }).length;
+            return (
+              <div key={p.id} className="fade-up" onClick={()=>setPerson(p)}
+                style={{background:T.card,border:`1px solid ${critical>0?T.gold:T.border}`,borderRadius:14,padding:"18px",cursor:"pointer",animationDelay:`${i*.04}s`,transition:"border-color .2s,transform .2s"}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor=T.green;e.currentTarget.style.transform="translateY(-2px)";}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor=critical>0?T.gold:T.border;e.currentTarget.style.transform="none";}}>
+                <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
+                  <div>
+                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:18,color:T.text}}>{p.name}</div>
+                    <div style={{fontSize:12,color:T.textMuted,marginTop:2}}>{p.designation||"—"} · {p.nationality||""}</div>
+                  </div>
+                  {critical>0&&<span style={{background:T.goldDim,color:T.gold,borderRadius:999,padding:"2px 10px",fontSize:11,fontWeight:700,flexShrink:0}}>{critical} alerts</span>}
+                </div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:10}}>
+                  {p.category&&<Tag color={T.green}>{p.category}</Tag>}
+                  {p.idNo&&<Chip>ID: {p.idNo}</Chip>}
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                  {[["Passport",p.passportExpiry],["Visa",p.visaExpiry],["Iqama",p.iqamaExpiry],["Muqeem",p.muqeemExpiry]].map(([lbl,exp])=>{
+                    const s=getStatus(daysUntil(exp));
+                    return (
+                      <div key={lbl} style={{background:T.bg,borderRadius:8,padding:"7px 10px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <span style={{fontSize:11,color:T.textMuted}}>{lbl}</span>
+                        {exp
+                          ?<span style={{fontSize:11,color:s.color,fontWeight:600}}>{s.label==="Valid"?fmtDate(exp):s.label}</span>
+                          :<span style={{fontSize:11,color:T.textMuted}}>—</span>
+                        }
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{marginTop:8,fontSize:12,color:T.textMuted,display:"flex",gap:8}}>
+                  <span>{(p.certs||[]).length} cert{(p.certs||[]).length!==1?"s":""}</span>
+                  <span style={{color:T.border}}>·</span>
+                  <span>click to view details →</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      }
+
+      {addModal  && <PersonModal mode={addModal.mode} person={addModal.person} cats={cats} onClose={()=>setAddModal(false)} onSave={savePerson}/>}
+      {catModal  && <CatManagerModal title="Manpower Categories" cats={cats} onSave={saveCats} onClose={()=>setCatModal(false)}/>}
+    </div>
+  );
+}
+
+/* ─── Person Detail view ─────────────────────────────────────────────────── */
+function PersonDetail({person,cats,onBack,onUpdate,onDelete,onEdit,showToast}) {
+  const [certModal, setCertModal] = useState(null);
+  const [activeTab, setActiveTab] = useState("profile");
+
+  const PTABS=[{id:"profile",label:"Profile"},{id:"certs",label:`Certifications (${(person.certs||[]).length})`}];
+
+  const saveCert=(cert,mode)=>{
+    const certs=[...(person.certs||[])];
+    if(mode==="add")certs.push({...cert,id:uid()});
+    else{const i=certs.findIndex(c=>c.id===cert.id);if(i>=0)certs[i]=cert;}
+    onUpdate({...person,certs});
+    showToast(mode==="add"?"Cert added":"Cert updated");
+    setCertModal(null);
+  };
+
+  const delCert=id=>{
+    const certs=(person.certs||[]).filter(c=>c.id!==id);
+    onUpdate({...person,certs});
+    showToast("Cert deleted","del");
+  };
+
+  const PROFILE_ROWS=[
+    ["Full Name",person.name],["ID No.",person.idNo],["Nationality",person.nationality],
+    ["Designation",person.designation],["Category",person.category],
+    ["Passport No.",person.passportNo],["Passport Expiry",fmtDate(person.passportExpiry)],
+    ["Visa No.",person.visaNo],["Visa Expiry",fmtDate(person.visaExpiry)],
+    ["Iqama No.",person.iqamaNo],["Iqama Expiry",fmtDate(person.iqamaExpiry)],
+    ["Muqeem No.",person.muqeemNo],["Muqeem Expiry",fmtDate(person.muqeemExpiry)],
+  ].filter(([,v])=>v&&v!=="—");
+
+  return (
+    <div style={{maxWidth:900,margin:"0 auto"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:22}}>
+        <button onClick={onBack} style={{background:T.card,border:`1px solid ${T.border}`,color:T.textSub,borderRadius:8,padding:"8px 14px",fontSize:13,fontWeight:600,display:"flex",alignItems:"center",gap:6}}>← Back</button>
+        <div style={{flex:1}}>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:24,color:T.text}}>{person.name}</div>
+          <div style={{fontSize:12,color:T.textMuted}}>{person.designation} · {person.category}</div>
+        </div>
+        <Btn color={T.blue}  onClick={onEdit}>✎ Edit</Btn>
+        <Btn color={T.red}   onClick={()=>{ if(window.confirm("Delete this person?")) onDelete(); }}>✕ Delete</Btn>
+      </div>
+
+      {/* Status cards row */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10,marginBottom:22}}>
+        {[["Passport",person.passportExpiry],["Visa",person.visaExpiry],["Iqama",person.iqamaExpiry],["Muqeem",person.muqeemExpiry]].map(([lbl,exp])=>{
+          const s=getStatus(daysUntil(exp));
+          return (
+            <div key={lbl} style={{background:T.card,border:`1px solid ${exp?s.color+"44":T.border}`,borderRadius:12,padding:"14px 16px"}}>
+              <div style={{fontSize:11,color:T.textMuted,fontWeight:600,marginBottom:6}}>{lbl.toUpperCase()}</div>
+              {exp
+                ?<><div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:800,color:s.color}}>{s.label}</div>
+                   <div style={{fontSize:12,color:T.textSub,marginTop:2}}>{fmtDate(exp)}</div>
+                   {daysUntil(exp)!==null&&<div style={{fontSize:11,color:s.color,marginTop:2,fontWeight:600}}>{Math.abs(daysUntil(exp))} days {daysUntil(exp)<0?"overdue":"left"}</div>}
+                </>
+                :<div style={{fontSize:13,color:T.textMuted}}>Not recorded</div>
+              }
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Tabs */}
+      <div style={{display:"flex",gap:8,marginBottom:18}}>
+        {PTABS.map(t=>(
+          <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{padding:"8px 18px",borderRadius:999,border:`1px solid ${activeTab===t.id?T.green:T.border}`,background:activeTab===t.id?T.greenDim:"transparent",color:activeTab===t.id?T.green:T.textSub,fontSize:13,fontWeight:activeTab===t.id?700:500,transition:"all .15s"}}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab==="profile"&&(
+        <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:14,padding:"18px 22px"}}>
+          {PROFILE_ROWS.map(([k,v])=>(
+            <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"9px 0",borderBottom:`1px solid ${T.border}`}}>
+              <span style={{fontSize:13,color:T.textMuted,fontWeight:500}}>{k}</span>
+              <span style={{fontSize:13,color:T.textSub,fontWeight:500}}>{v}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {activeTab==="certs"&&(
+        <div>
+          <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}>
+            <Btn color={T.green} solid onClick={()=>setCertModal({mode:"add"})}>+ Add Certification</Btn>
+          </div>
+          {(person.certs||[]).length===0
+            ?<Empty icon="◈" label="No certifications" sub="Add this person's certifications" color={T.green} onAdd={()=>setCertModal({mode:"add"})}/>
+            :<div style={{display:"grid",gap:10}}>
+              {(person.certs||[]).map((c,i)=>{
+                const s=getStatus(daysUntil(c.expiryDate));
+                return (
+                  <div key={c.id} className="fade-up" style={{background:T.card,border:`1px solid ${T.border}`,borderLeft:`4px solid ${s.color}`,borderRadius:12,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,animationDelay:`${i*.04}s`}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+                        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:15,color:T.text}}>{c.name}</span>
+                        <Tag color={s.color}>{s.label}</Tag>
+                      </div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                        {c.certNo&&<Chip>No: {c.certNo}</Chip>}
+                        {c.issueDate&&<Chip>Issued: {fmtDate(c.issueDate)}</Chip>}
+                        {c.expiryDate&&<Chip color={s.color}>Exp: {fmtDate(c.expiryDate)}</Chip>}
+                        {c.fileLink&&<FileLink href={c.fileLink}/>}
+                      </div>
+                    </div>
+                    <div style={{display:"flex",gap:6,flexShrink:0}}>
+                      <ABtn color={T.blue} onClick={()=>setCertModal({mode:"edit",cert:c})}>✎</ABtn>
+                      <ABtn color={T.red}  onClick={()=>delCert(c.id)}>✕</ABtn>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          }
+        </div>
+      )}
+
+      {certModal&&<CertModal mode={certModal.mode} cert={certModal.cert} onClose={()=>setCertModal(null)} onSave={saveCert}/>}
+    </div>
+  );
+}
+
+function PersonModal({mode,person,cats,onClose,onSave}) {
+  const [f,setF]=useState(person||{});
+  const set=k=>v=>setF(p=>({...p,[k]:v}));
+  return (
+    <FormModal title={`${mode==="add"?"ADD":"EDIT"} PERSON`} color={T.green} onClose={onClose}
+      onSave={()=>{if(!f.name){alert("Name required");return;}onSave(f,mode);}}>
+      <FieldRow label="Full Name *"><FInput value={f.name||""} onChange={set("name")} color={T.green}/></FieldRow>
+      <FieldRow label="Category">
+        <FSelect value={f.category||""} onChange={set("category")} color={T.green}>
+          <option value="">Select…</option>
+          {cats.map(c=><option key={c} value={c}>{c}</option>)}
+        </FSelect>
+      </FieldRow>
+      <FieldRow label="ID No."><FInput value={f.idNo||""} onChange={set("idNo")} color={T.green}/></FieldRow>
+      <FieldRow label="Nationality"><FInput value={f.nationality||""} onChange={set("nationality")} color={T.green}/></FieldRow>
+      <FieldRow label="Designation"><FInput value={f.designation||""} onChange={set("designation")} color={T.green}/></FieldRow>
+      <SectionDivider label="PASSPORT"/>
+      <FieldRow label="Passport No."><FInput value={f.passportNo||""} onChange={set("passportNo")} color={T.green}/></FieldRow>
+      <FieldRow label="Passport Expiry"><FInput type="date" value={f.passportExpiry||""} onChange={set("passportExpiry")} color={T.green}/></FieldRow>
+      <SectionDivider label="VISA"/>
+      <FieldRow label="Visa No."><FInput value={f.visaNo||""} onChange={set("visaNo")} color={T.green}/></FieldRow>
+      <FieldRow label="Visa Expiry"><FInput type="date" value={f.visaExpiry||""} onChange={set("visaExpiry")} color={T.green}/></FieldRow>
+      <SectionDivider label="IQAMA"/>
+      <FieldRow label="Iqama No."><FInput value={f.iqamaNo||""} onChange={set("iqamaNo")} color={T.green}/></FieldRow>
+      <FieldRow label="Iqama Expiry"><FInput type="date" value={f.iqamaExpiry||""} onChange={set("iqamaExpiry")} color={T.green}/></FieldRow>
+      <SectionDivider label="MUQEEM"/>
+      <FieldRow label="Muqeem No."><FInput value={f.muqeemNo||""} onChange={set("muqeemNo")} color={T.green}/></FieldRow>
+      <FieldRow label="Muqeem Expiry"><FInput type="date" value={f.muqeemExpiry||""} onChange={set("muqeemExpiry")} color={T.green}/></FieldRow>
+    </FormModal>
+  );
+}
+
+function CertModal({mode,cert,onClose,onSave}) {
+  const [f,setF]=useState(cert||{});
+  const set=k=>v=>setF(p=>({...p,[k]:v}));
+  return (
+    <FormModal title={`${mode==="add"?"ADD":"EDIT"} CERTIFICATION`} color={T.green} onClose={onClose}
+      onSave={()=>{if(!f.name){alert("Cert name required");return;}onSave(f,mode);}}>
+      <FieldRow label="Certification Name *"><FInput value={f.name||""} onChange={set("name")} color={T.green}/></FieldRow>
+      <FieldRow label="Certificate No."><FInput value={f.certNo||""} onChange={set("certNo")} color={T.green}/></FieldRow>
+      <FieldRow label="Issue Date"><FInput type="date" value={f.issueDate||""} onChange={set("issueDate")} color={T.green}/></FieldRow>
+      <FieldRow label="Expiry Date"><FInput type="date" value={f.expiryDate||""} onChange={set("expiryDate")} color={T.green}/></FieldRow>
+      <FieldRow label="File Link"><FLink value={f.fileLink||""} onChange={set("fileLink")}/></FieldRow>
+    </FormModal>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   EQUIPMENT PAGE
+════════════════════════════════════════════════════════════════════════════ */
+function EquipmentPage({data,setData,showToast}) {
+  const [modal,   setModal]   = useState(null);
+  const [selEq,   setSelEq]   = useState(null); // selected equipment
+  const [fProj,   setFProj]   = useState("");
+  const [fStatus, setFStatus] = useState("");
+
+  const equipment = data.equipment || [];
+  const projects  = data.projects  || [];
+
+  const visible = equipment.filter(e=>{
+    return (!fProj||e.project===fProj)&&(!fStatus||e.status===fStatus);
+  });
+
+  const saveEq=(eq,mode)=>{
+    setData(prev=>{
+      const list=[...prev.equipment];
+      if(mode==="add")list.push({...eq,id:uid(),certifications:[],invoices:[],insurance:[],permits:[]});
+      else{const i=list.findIndex(e=>e.id===eq.id);if(i>=0)list[i]=eq;}
+      return{...prev,equipment:list};
+    });
+    showToast(mode==="add"?"Equipment added":"Updated");
+    setModal(null);
+    if(selEq)setSelEq(eq);
+  };
+
+  const delEq=id=>{
+    setData(prev=>({...prev,equipment:prev.equipment.filter(e=>e.id!==id)}));
+    showToast("Deleted","del");setSelEq(null);
+  };
+
+  const updateEq=updated=>{
+    setData(prev=>{
+      const list=[...prev.equipment];
+      const i=list.findIndex(e=>e.id===updated.id);
+      if(i>=0)list[i]=updated;
+      return{...prev,equipment:list};
+    });
+    setSelEq(updated);
+  };
+
+  if(selEq){
+    const fresh=data.equipment.find(e=>e.id===selEq.id)||selEq;
+    return <EquipmentDetail eq={fresh} projects={projects} onBack={()=>setSelEq(null)} onUpdate={updateEq} onDelete={()=>delEq(fresh.id)} onEdit={()=>setModal({mode:"edit",eq:fresh})} showToast={showToast}/>;
+  }
+
+  const STATUS_COLORS={"Active":T.green,"Under Maintenance":T.gold,"Inactive":T.red};
+
+  return (
+    <div style={{maxWidth:1100,margin:"0 auto"}}>
+      <PageHeader title="EQUIPMENT" sub="Assets with certifications, invoices, insurance & permits" color={T.gold}>
+        <select value={fProj} onChange={e=>setFProj(e.target.value)} style={{background:T.inputBg,border:`1px solid ${T.border}`,borderRadius:8,padding:"8px 12px",fontSize:13,color:T.textSub,outline:"none",colorScheme:"dark"}}>
+          <option value="">All Projects</option>
+          {projects.map(p=><option key={p} value={p}>{p}</option>)}
+        </select>
+        <select value={fStatus} onChange={e=>setFStatus(e.target.value)} style={{background:T.inputBg,border:`1px solid ${T.border}`,borderRadius:8,padding:"8px 12px",fontSize:13,color:T.textSub,outline:"none",colorScheme:"dark"}}>
+          <option value="">All Statuses</option>
+          <option>Active</option><option>Under Maintenance</option><option>Inactive</option>
+        </select>
+        <Btn color={T.gold} solid onClick={()=>setModal({mode:"add"})}>+ Add Equipment</Btn>
+      </PageHeader>
+
+      {visible.length===0
+        ?<Empty icon="◎" label="No equipment found" sub="Add your first asset" color={T.gold} onAdd={()=>setModal({mode:"add"})}/>
+        :<div style={{display:"grid",gap:10}}>
+          {visible.map((eq,i)=>{
+            const allExp=[...(eq.certifications||[]).map(c=>c.expiryDate),...(eq.insurance||[]).map(c=>c.expiryDate),...(eq.permits||[]).map(c=>c.expiryDate)];
+            const alerts=allExp.filter(d=>{const x=daysUntil(d);return x!==null&&x<=90;}).length;
+            const sCol=STATUS_COLORS[eq.status]||T.textMuted;
+            return (
+              <div key={eq.id} className="fade-up" onClick={()=>setSelEq(eq)}
+                style={{background:T.card,border:`1px solid ${alerts>0?T.gold:T.border}`,borderLeft:`4px solid ${sCol}`,borderRadius:12,padding:"16px 18px",cursor:"pointer",animationDelay:`${i*.03}s`,transition:"background .15s"}}
+                onMouseEnter={e=>e.currentTarget.style.background=T.cardHover}
+                onMouseLeave={e=>e.currentTarget.style.background=T.card}>
+                <div style={{display:"flex",alignItems:"flex-start",gap:14}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+                      <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:17,color:T.text}}>{eq.name}</span>
+                      {eq.status&&<Tag color={sCol}>{eq.status}</Tag>}
+                      {alerts>0&&<Tag color={T.gold}>{alerts} expiring</Tag>}
+                    </div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                      {eq.model&&<Chip>{eq.model}</Chip>}
+                      {eq.serialNo&&<Chip>S/N: {eq.serialNo}</Chip>}
+                      {eq.project&&<Chip>{eq.project}</Chip>}
+                      {eq.operator&&<Chip>Op: {eq.operator}</Chip>}
+                    </div>
+                    <div style={{marginTop:8,fontSize:12,color:T.textMuted,display:"flex",gap:12}}>
+                      <span>📜 {(eq.certifications||[]).length} certs</span>
+                      <span>🧾 {(eq.invoices||[]).length} invoices</span>
+                      <span>🛡 {(eq.insurance||[]).length} insurance</span>
+                      <span>⬡ {(eq.permits||[]).length} permits</span>
+                      <span style={{color:T.blue}}>click to view →</span>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:6,flexShrink:0}} onClick={e=>e.stopPropagation()}>
+                    <ABtn color={T.blue} onClick={()=>setModal({mode:"edit",eq})}>✎</ABtn>
+                    <ABtn color={T.red}  onClick={()=>{if(window.confirm("Delete this equipment?"))delEq(eq.id);}}>✕</ABtn>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      }
+
+      {modal&&<EqModal mode={modal.mode} eq={modal.eq} projects={projects} onClose={()=>setModal(null)} onSave={saveEq}/>}
+    </div>
+  );
+}
+
+/* ─── Equipment Detail ───────────────────────────────────────────────────── */
+function EquipmentDetail({eq,projects,onBack,onUpdate,onDelete,onEdit,showToast}) {
+  const [activeTab,setActiveTab]=useState("certifications");
+  const [subModal, setSubModal] =useState(null);
+
+  const EQ_SUBTABS=[
+    {id:"certifications",label:"Certifications",icon:"📜",color:T.blue},
+    {id:"invoices",      label:"Invoices",      icon:"🧾",color:T.green},
+    {id:"insurance",     label:"Insurance",     icon:"🛡",color:T.purple},
+    {id:"permits",       label:"Permits",       icon:"⬡",color:T.gold},
+  ];
+
+  const saveSubRecord=(type,rec,mode)=>{
+    const list=[...(eq[type]||[])];
+    if(mode==="add")list.push({...rec,id:uid()});
+    else{const i=list.findIndex(r=>r.id===rec.id);if(i>=0)list[i]=rec;}
+    onUpdate({...eq,[type]:list});
+    showToast(mode==="add"?"Record added":"Record updated");
+    setSubModal(null);
+  };
+
+  const delSubRecord=(type,id)=>{
+    const list=(eq[type]||[]).filter(r=>r.id!==id);
+    onUpdate({...eq,[type]:list});
+    showToast("Deleted","del");
+  };
+
+  const curTab=EQ_SUBTABS.find(t=>t.id===activeTab);
+  const records=eq[activeTab]||[];
+
+  return (
+    <div style={{maxWidth:1000,margin:"0 auto"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+        <button onClick={onBack} style={{background:T.card,border:`1px solid ${T.border}`,color:T.textSub,borderRadius:8,padding:"8px 14px",fontSize:13,fontWeight:600}}>← Back</button>
+        <div style={{flex:1}}>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:24,color:T.text}}>{eq.name}</div>
+          <div style={{fontSize:12,color:T.textMuted}}>{eq.model} · {eq.serialNo} · {eq.project}</div>
+        </div>
+        <Btn color={T.blue} onClick={onEdit}>✎ Edit</Btn>
+        <Btn color={T.red}  onClick={()=>{if(window.confirm("Delete?"))onDelete();}}>✕ Delete</Btn>
+      </div>
+
+      {/* Info strip */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:22}}>
+        {[["Status",eq.status,"—"],["Operator",eq.operator,"—"],["Project",eq.project,"—"],["Purchase Date",fmtDate(eq.purchaseDate),"—"]].map(([k,v])=>(
+          <div key={k} style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:10,padding:"12px 14px"}}>
+            <div style={{fontSize:10,color:T.textMuted,fontWeight:700,marginBottom:4,letterSpacing:".5px"}}>{k.toUpperCase()}</div>
+            <div style={{fontSize:14,color:T.text,fontWeight:600}}>{v||"—"}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Sub-tabs */}
+      <div style={{display:"flex",gap:8,marginBottom:18,overflowX:"auto",paddingBottom:4}}>
+        {EQ_SUBTABS.map(t=>{
+          const cnt=(eq[t.id]||[]).length;
+          const active=activeTab===t.id;
+          return (
+            <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{flexShrink:0,padding:"8px 16px",borderRadius:999,border:`1px solid ${active?t.color:T.border}`,background:active?`${t.color}18`:"transparent",color:active?t.color:T.textSub,fontSize:13,fontWeight:active?700:500,display:"flex",alignItems:"center",gap:6,transition:"all .15s"}}>
+              {t.icon} {t.label} <span style={{background:active?t.color:T.border,color:active?"#000":T.textMuted,borderRadius:999,padding:"1px 7px",fontSize:11,fontWeight:700}}>{cnt}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}>
+        <Btn color={curTab.color} solid onClick={()=>setSubModal({mode:"add",type:activeTab})}>+ Add {curTab.label.replace(/s$/,"")}</Btn>
+      </div>
+
+      {records.length===0
+        ?<Empty icon={curTab.icon} label={`No ${curTab.label.toLowerCase()}`} sub={`Add the first record`} color={curTab.color} onAdd={()=>setSubModal({mode:"add",type:activeTab})}/>
+        :<div style={{display:"grid",gap:10}}>
+          {records.map((r,i)=><SubRecordCard key={r.id} r={r} type={activeTab} color={curTab.color} delay={i*.03} onEdit={()=>setSubModal({mode:"edit",type:activeTab,rec:r})} onDel={()=>delSubRecord(activeTab,r.id)}/>)}
+        </div>
+      }
+
+      {subModal&&<SubRecordModal mode={subModal.mode} type={subModal.type} rec={subModal.rec} onClose={()=>setSubModal(null)} onSave={(rec,mode)=>saveSubRecord(subModal.type,rec,mode)}/>}
+    </div>
+  );
+}
+
+function SubRecordCard({r,type,color,delay,onEdit,onDel}) {
+  const expDate=r.expiryDate;
+  const s=getStatus(daysUntil(expDate));
+  const title=r.certNo||r.invoiceNo||r.policyNo||r.permitNo||"Record";
+  return (
+    <div className="fade-up" style={{background:T.card,border:`1px solid ${T.border}`,borderLeft:`4px solid ${expDate?s.color:color}`,borderRadius:12,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,animationDelay:`${delay}s`}}>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+          <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:15,color:T.text}}>{title}</span>
+          {expDate&&<Tag color={s.color}>{s.label}</Tag>}
+        </div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+          {r.issuedBy&&<Chip>{r.issuedBy}</Chip>}
+          {r.supplier&&<Chip>{r.supplier}</Chip>}
+          {r.insurer&&<Chip>{r.insurer}</Chip>}
+          {r.type&&<Chip>{r.type}</Chip>}
+          {r.amount&&<Chip color={T.green}>SAR {Number(r.amount).toLocaleString()}</Chip>}
+          {r.issueDate&&<Chip>Issued: {fmtDate(r.issueDate)}</Chip>}
+          {r.date&&<Chip>Date: {fmtDate(r.date)}</Chip>}
+          {expDate&&<Chip color={s.color}>Exp: {fmtDate(expDate)}</Chip>}
+          {expDate&&daysUntil(expDate)!==null&&<Chip color={s.color}>{daysUntil(expDate)>=0?`${daysUntil(expDate)}d left`:`${Math.abs(daysUntil(expDate))}d overdue`}</Chip>}
+          {r.fileLink&&<FileLink href={r.fileLink}/>}
+        </div>
+        {r.description&&<div style={{marginTop:6,fontSize:12,color:T.textMuted,fontStyle:"italic"}}>{r.description}</div>}
+      </div>
+      <div style={{display:"flex",gap:6,flexShrink:0}}>
+        <ABtn color={T.blue} onClick={onEdit}>✎</ABtn>
+        <ABtn color={T.red}  onClick={onDel}>✕</ABtn>
+      </div>
+    </div>
+  );
+}
+
+function SubRecordModal({mode,type,rec,onClose,onSave}) {
+  const [f,setF]=useState(rec||{});
+  const set=k=>v=>setF(p=>({...p,[k]:v}));
+  const CONFIGS={
+    certifications:{color:T.blue,  title:"CERTIFICATION",  fields:[["certNo","Certificate No."],["issuedBy","Issued By"],["issueDate","Issue Date","date"],["expiryDate","Expiry Date","date"],["fileLink","File Link","link"]]},
+    invoices:      {color:T.green, title:"INVOICE",        fields:[["invoiceNo","Invoice No.","","req"],["supplier","Supplier","","req"],["amount","Amount (SAR)"],["date","Invoice Date","date"],["description","Description","textarea"],["fileLink","File Link","link"]]},
+    insurance:     {color:T.purple,title:"INSURANCE",      fields:[["policyNo","Policy No.","","req"],["insurer","Insurer","","req"],["type","Policy Type"],["issueDate","Issue Date","date"],["expiryDate","Expiry Date","date"],["fileLink","File Link","link"]]},
+    permits:       {color:T.gold,  title:"PERMIT",         fields:[["permitNo","Permit No.","","req"],["type","Permit Type"],["issuedBy","Issued By"],["issueDate","Issue Date","date"],["expiryDate","Expiry Date","date"],["fileLink","File Link","link"]]},
+  };
+  const cfg=CONFIGS[type]||CONFIGS.certifications;
+  return (
+    <FormModal title={`${mode==="add"?"ADD":"EDIT"} ${cfg.title}`} color={cfg.color} onClose={onClose}
+      onSave={()=>{onSave(f,mode);}}>
+      {cfg.fields.map(([k,label,ftype,req])=>(
+        <FieldRow key={k} label={`${label}${req?" *":""}`}>
+          {ftype==="textarea"
+            ?<FTextarea value={f[k]||""} onChange={set(k)} color={cfg.color}/>
+            :ftype==="link"
+              ?<FLink value={f[k]||""} onChange={set(k)}/>
+              :<FInput type={ftype||"text"} value={f[k]||""} onChange={set(k)} color={cfg.color}/>
+          }
+        </FieldRow>
+      ))}
+    </FormModal>
+  );
+}
+
+function EqModal({mode,eq,projects,onClose,onSave}) {
+  const [f,setF]=useState(eq||{});
+  const set=k=>v=>setF(p=>({...p,[k]:v}));
+  return (
+    <FormModal title={`${mode==="add"?"ADD":"EDIT"} EQUIPMENT`} color={T.gold} onClose={onClose}
+      onSave={()=>{if(!f.name){alert("Equipment name required");return;}onSave(f,mode);}}>
+      <FieldRow label="Equipment Name *"><FInput value={f.name||""} onChange={set("name")} color={T.gold}/></FieldRow>
+      <FieldRow label="Model / Make"><FInput value={f.model||""} onChange={set("model")} color={T.gold}/></FieldRow>
+      <FieldRow label="Serial Number"><FInput value={f.serialNo||""} onChange={set("serialNo")} color={T.gold}/></FieldRow>
+      <FieldRow label="Project">
+        <FSelect value={f.project||""} onChange={set("project")} color={T.gold}>
+          <option value="">Select…</option>
+          {projects.map(p=><option key={p} value={p}>{p}</option>)}
+        </FSelect>
+      </FieldRow>
+      <FieldRow label="Status">
+        <FSelect value={f.status||""} onChange={set("status")} color={T.gold}>
+          <option value="">Select…</option>
+          <option>Active</option><option>Under Maintenance</option><option>Inactive</option>
+        </FSelect>
+      </FieldRow>
+      <FieldRow label="Operator / Responsible Person"><FInput value={f.operator||""} onChange={set("operator")} color={T.gold}/></FieldRow>
+      <FieldRow label="Purchase Date"><FInput type="date" value={f.purchaseDate||""} onChange={set("purchaseDate")} color={T.gold}/></FieldRow>
+      <FieldRow label="Notes"><FTextarea value={f.notes||""} onChange={set("notes")} color={T.gold}/></FieldRow>
+    </FormModal>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SHARED COMPONENTS
+════════════════════════════════════════════════════════════════════════════ */
+function PageHeader({title,sub,color,children}) {
+  return (
+    <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:12,marginBottom:22}}>
+      <div>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:26,color:T.text}}>{title}</div>
+        <div style={{fontSize:13,color:T.textMuted,marginTop:2}}>{sub}</div>
+      </div>
+      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>{children}</div>
+    </div>
+  );
+}
+
+function Empty({icon,label,sub,color,onAdd}) {
+  return (
+    <div style={{textAlign:"center",padding:"60px 20px",background:T.card,borderRadius:14,border:`1px dashed ${T.border}`}}>
+      <div style={{fontSize:44,color,opacity:.2,marginBottom:14}}>{icon}</div>
+      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:18,color:T.textSub,marginBottom:6}}>{label}</div>
+      <div style={{fontSize:13,color:T.textMuted,marginBottom:22}}>{sub}</div>
+      <button onClick={onAdd} style={{background:color,color:"#000",border:"none",borderRadius:8,padding:"9px 22px",fontSize:13,fontWeight:700}}>+ Add Now</button>
+    </div>
+  );
+}
+
+function Overlay({children,onClose}) {
+  return (
+    <div className="fade-in" onClick={e=>e.target===e.currentTarget&&onClose()}
+      style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:16,overflowY:"auto"}}>
+      {children}
+    </div>
+  );
+}
+
+function FormModal({title,color,children,onClose,onSave}) {
+  return (
+    <Overlay onClose={onClose}>
+      <div className="slide-up" style={{background:T.sidebar,border:`1px solid ${T.border}`,borderRadius:18,width:"100%",maxWidth:500,maxHeight:"90vh",overflow:"auto"}}>
+        <div style={{padding:"20px 22px 16px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,background:T.sidebar,zIndex:1}}>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:18,color:T.text}}>{title}</div>
+          <button onClick={onClose} style={{background:T.bg,border:`1px solid ${T.border}`,color:T.textSub,borderRadius:8,width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>×</button>
+        </div>
+        <div style={{padding:"18px 22px"}}>{children}</div>
+        <div style={{padding:"0 22px 22px",display:"flex",gap:10,position:"sticky",bottom:0,background:T.sidebar,paddingTop:12,borderTop:`1px solid ${T.border}`}}>
+          <button onClick={onClose} style={{flex:1,background:T.bg,border:`1px solid ${T.border}`,color:T.textSub,borderRadius:10,padding:"11px",fontSize:13,fontWeight:600}}>Cancel</button>
+          <button onClick={onSave}  style={{flex:2,background:color,border:"none",color:"#000",borderRadius:10,padding:"11px",fontSize:14,fontWeight:700}}>Save</button>
+        </div>
+      </div>
+    </Overlay>
+  );
+}
+
+function CatManagerModal({title,cats,onSave,onClose}) {
+  const [list,setList]=useState([...cats]);
+  const [newCat,setNewCat]=useState("");
+  const add=()=>{const n=newCat.trim();if(!n||list.includes(n))return;setList(l=>[...l,n]);setNewCat("");};
+  return (
+    <Overlay onClose={onClose}>
+      <div className="slide-up" style={{background:T.sidebar,border:`1px solid ${T.border}`,borderRadius:18,width:"100%",maxWidth:440,maxHeight:"80vh",display:"flex",flexDirection:"column"}}>
+        <div style={{padding:"20px 22px 16px",borderBottom:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:18,color:T.text}}>{title.toUpperCase()}</div>
+          <button onClick={onClose} style={{background:T.bg,border:`1px solid ${T.border}`,color:T.textSub,borderRadius:8,width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>×</button>
+        </div>
+        <div style={{padding:"14px 22px",borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
+          <div style={{display:"flex",gap:8}}>
+            <input value={newCat} onChange={e=>setNewCat(e.target.value)} onKeyDown={e=>e.key==="Enter"&&add()} placeholder="New category name…"
+              style={{flex:1,background:T.inputBg,border:`1px solid ${T.border}`,borderRadius:8,padding:"9px 12px",fontSize:13,color:T.text,outline:"none",colorScheme:"dark"}}
+              onFocus={e=>e.target.style.borderColor=T.blue} onBlur={e=>e.target.style.borderColor=T.border}/>
+            <button onClick={add} style={{background:T.green,color:"#000",border:"none",borderRadius:8,padding:"9px 16px",fontSize:13,fontWeight:700,flexShrink:0}}>+ Add</button>
+          </div>
+        </div>
+        <div style={{flex:1,overflowY:"auto",padding:"12px 22px"}}>
+          {list.map((c,i)=>(
+            <div key={c} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 12px",background:T.bg,borderRadius:9,marginBottom:7,border:`1px solid ${T.border}`}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{width:7,height:7,borderRadius:"50%",background:T.blue}}/>
+                <span style={{fontSize:14,color:T.text}}>{c}</span>
+              </div>
+              <button onClick={()=>setList(l=>l.filter(x=>x!==c))} style={{background:T.redDim,border:`1px solid ${T.red}33`,color:T.red,borderRadius:7,width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700}}>✕</button>
+            </div>
+          ))}
+        </div>
+        <div style={{padding:"12px 22px 22px",flexShrink:0}}>
+          <button onClick={()=>{onSave(list);onClose();}} style={{width:"100%",background:T.blue,border:"none",color:"#000",borderRadius:10,padding:"12px",fontSize:14,fontWeight:700}}>Save Categories</button>
+        </div>
+      </div>
+    </Overlay>
+  );
+}
+
+function FieldRow({label,children}) {
+  return (
+    <div style={{marginBottom:13}}>
+      <label style={{display:"block",fontSize:11,fontWeight:700,color:T.textMuted,marginBottom:5,letterSpacing:".5px"}}>{label.toUpperCase()}</label>
+      {children}
+    </div>
+  );
+}
+
+function SectionDivider({label}) {
+  return <div style={{fontSize:9,fontWeight:700,color:T.textMuted,letterSpacing:"1.5px",marginTop:16,marginBottom:10,paddingBottom:6,borderBottom:`1px solid ${T.border}`}}>{label}</div>;
+}
+
+function FInput({type,value,onChange,color,placeholder}) {
+  return <input type={type||"text"} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
+    style={{width:"100%",background:T.inputBg,border:`1px solid ${T.border}`,borderRadius:8,padding:"9px 12px",fontSize:13,color:T.text,outline:"none",colorScheme:"dark"}}
+    onFocus={e=>e.target.style.borderColor=color||T.blue} onBlur={e=>e.target.style.borderColor=T.border}/>;
+}
+
+function FTextarea({value,onChange,color}) {
+  return <textarea value={value} onChange={e=>onChange(e.target.value)} rows={2}
+    style={{width:"100%",background:T.inputBg,border:`1px solid ${T.border}`,borderRadius:8,padding:"9px 12px",fontSize:13,color:T.text,outline:"none",resize:"vertical",colorScheme:"dark"}}
+    onFocus={e=>e.target.style.borderColor=color||T.blue} onBlur={e=>e.target.style.borderColor=T.border}/>;
+}
+
+function FSelect({value,onChange,color,children}) {
+  return <select value={value} onChange={e=>onChange(e.target.value)}
+    style={{width:"100%",background:T.inputBg,border:`1px solid ${T.border}`,borderRadius:8,padding:"9px 12px",fontSize:13,color:value?T.text:T.textMuted,outline:"none",colorScheme:"dark"}}
+    onFocus={e=>e.target.style.borderColor=color||T.blue} onBlur={e=>e.target.style.borderColor=T.border}>
+    {children}
+  </select>;
+}
+
+function FLink({value,onChange}) {
+  return (
+    <div>
+      <input type="url" value={value} onChange={e=>onChange(e.target.value)} placeholder="https://drive.google.com/… or sharepoint.com/…"
+        style={{width:"100%",background:T.inputBg,border:`1px solid ${T.border}`,borderRadius:8,padding:"9px 12px",fontSize:13,color:T.blue,outline:"none",colorScheme:"dark"}}
+        onFocus={e=>e.target.style.borderColor=T.blue} onBlur={e=>e.target.style.borderColor=T.border}/>
+      {value&&<a href={value} target="_blank" rel="noreferrer" style={{fontSize:11,color:T.blue,marginTop:4,display:"inline-block"}}>📎 Test link →</a>}
+    </div>
+  );
+}
+
+const Chip     = ({children,color}) => <span style={{background:T.bg,border:`1px solid ${T.borderLight}`,borderRadius:6,padding:"2px 9px",fontSize:12,color:color||T.textSub,fontWeight:500}}>{children}</span>;
+const Tag      = ({children,color}) => <span style={{background:`${color}18`,border:`1px solid ${color}33`,borderRadius:5,padding:"2px 8px",fontSize:11,color,fontWeight:700}}>{children}</span>;
+const ABtn     = ({onClick,color,children}) => <button onClick={onClick} style={{width:30,height:30,borderRadius:7,border:`1px solid ${color}33`,background:`${color}18`,color,fontSize:13,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{children}</button>;
+const FileLink = ({href}) => <a href={href} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{background:T.blueDim,border:`1px solid ${T.blue}33`,borderRadius:6,padding:"2px 9px",fontSize:12,color:T.blue,fontWeight:600,textDecoration:"none",display:"inline-flex",alignItems:"center",gap:4}}>📎 Open File</a>;
+const Btn      = ({children,onClick,color,solid}) => <button onClick={onClick} style={{background:solid?color:T.bg,border:`1px solid ${solid?color:T.border}`,color:solid?"#000":color||T.textSub,borderRadius:8,padding:"8px 16px",fontSize:13,fontWeight:600,transition:"all .15s"}}>{children}</button>;
