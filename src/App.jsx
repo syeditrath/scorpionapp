@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import * as XLSX from "xlsx";
 
-/* ─── Global CSS ─── */
-const GLOBAL_CSS = " @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700;800&display=swap'); *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; } html, body, #root { height: 100%; width: 100%; overflow: hidden; } body { font-family: 'Barlow', sans-serif; background: #05070a; color: #f8fafc; -webkit-font-smoothing: antialiased; } ::-webkit-scrollbar { width: 6px; height: 6px; } ::-webkit-scrollbar-track { background: #05070a; } ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; } @keyframes fadeUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } } @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } .fade-up { animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; } .fade-in { animation: fadeIn 0.3s ease both; } ";
-
-/* ─── Theme ─── */
+// ─── Theme & Styles ───
 const T = {
   bg: "#05070a",
   sidebar: "#0b0e14",
@@ -20,30 +17,28 @@ const T = {
   text: "#f8fafc",
   textSub: "#94a3b8",
   textMuted: "#475569",
-  blueDim: "rgba(56, 189, 248, 0.08)",
-  shadow: "0 10px 40px -10px rgba(0,0,0,0.7)"
+  blueDim: "rgba(56, 189, 248, 0.08)"
 };
 
-/* ─── Helpers ─── */
+const GLOBAL_CSS = "body { background: #05070a; color: #f8fafc; margin: 0; font-family: sans-serif; } .fade-in { animation: fadeIn 0.3s ease both; } @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }";
+
+// ─── Utility Functions ───
 const uid = function() { return Math.random().toString(36).slice(2, 9); };
-const daysUntil = function(d) { return d ? Math.ceil((new Date(d) - new Date()) / 86400000) : null; };
-const fmtDate = function(d) { return d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"; };
+const daysUntil = function(d) { 
+  if (!d) return null;
+  return Math.ceil((new Date(d) - new Date()) / 86400000); 
+};
+const fmtDate = function(d) { 
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("en-GB");
+};
 
-const MP_CERT_MAP = { "NAME": "name", "EMPLOYEE ID": "idNo", "CERTIFICATE": "certName", "EXPIRY DATE": "expiryDate" };
-const EQ_CERT_MAP = { "EQUIPMENT": "name", "SERIAL NO": "serialNo", "EXPIRY DATE": "expiryDate" };
-
-/* ─── Components ─── */
-
+// ─── Sub-Components ───
 function StatCard(props) {
   return (
-    <div className="fade-up" style={{ background: T.card, border: "1px solid " + T.border, borderRadius: "16px", padding: "20px", animationDelay: props.delay || "0s", boxShadow: T.shadow }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div>
-          <div style={{ fontSize: "11px", fontWeight: "700", color: T.textSub, letterSpacing: "1px", marginBottom: "8px" }}>{props.label.toUpperCase()}</div>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: "36px", fontWeight: "800", color: props.color, lineHeight: "1" }}>{props.value}</div>
-        </div>
-        <div style={{ background: props.color + "15", color: props.color, width: "40px", height: "40px", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>{props.icon}</div>
-      </div>
+    <div style={{ background: T.card, border: "1px solid " + T.border, borderRadius: "12px", padding: "20px" }}>
+      <div style={{ fontSize: "11px", color: T.textSub, marginBottom: "5px" }}>{props.label}</div>
+      <div style={{ fontSize: "32px", fontWeight: "bold", color: props.color }}>{props.value}</div>
     </div>
   );
 }
@@ -57,20 +52,16 @@ function ExcelDropZone(props) {
     const reader = new FileReader();
     reader.onload = function(e) {
       const wb = XLSX.read(e.target.result, { type: "array", cellDates: true });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rawRows = XLSX.utils.sheet_to_json(ws, { defval: "" });
-      const map = props.type === "manpower" ? MP_CERT_MAP : EQ_CERT_MAP;
-      const parsed = rawRows.map(function(row) {
-        const rec = { id: uid() };
-        Object.entries(map).forEach(function(entry) {
-          const excelKey = entry[0];
-          const dataKey = entry[1];
-          const val = row[excelKey] || row[excelKey.toUpperCase()];
-          rec[dataKey] = val instanceof Date ? val.toISOString().slice(0, 10) : val;
-        });
-        return rec;
-      }).filter(function(r) { return Object.keys(r).length > 1; });
-      props.onDataParsed(parsed);
+      const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+      const parsed = data.map(function(row) {
+        return {
+          id: uid(),
+          name: row["NAME"] || row["EQUIPMENT"] || "Unknown",
+          idNo: row["EMPLOYEE ID"] || row["SERIAL NO"] || "N/A",
+          expiryDate: row["EXPIRY DATE"] || ""
+        };
+      });
+      props.onImport(parsed);
     };
     reader.readAsArrayBuffer(file);
   };
@@ -84,47 +75,89 @@ function ExcelDropZone(props) {
       style={{
         border: "2px dashed " + (isDragging ? T.blue : T.border),
         background: isDragging ? T.blueDim : T.card2,
-        borderRadius: "16px", padding: "40px", textAlign: "center", cursor: "pointer", transition: "all 0.2s ease", marginBottom: "20px"
+        padding: "40px", textAlign: "center", cursor: "pointer", borderRadius: "12px", marginBottom: "20px"
       }}
     >
-      <input type="file" ref={fileInputRef} onChange={function(e) { handleFile(e.target.files[0]); }} style={{ display: "none" }} accept=".xlsx, .xls" />
-      <div style={{ fontSize: "32px", marginBottom: "10px" }}>📥</div>
-      <div style={{ fontWeight: "700", color: T.text }}>Import {props.type} Data</div>
-      <div style={{ color: T.textSub, fontSize: "12px" }}>Drag & drop Excel or click to browse</div>
+      <input type="file" ref={fileInputRef} onChange={function(e) { handleFile(e.target.files[0]); }} style={{ display: "none" }} />
+      <div style={{ color: T.text }}>Drop Excel file here to import {props.type}</div>
     </div>
   );
 }
 
-/* ─── Main Application ─── */
-
+// ─── Main App ───
 export default function App() {
   const [data, setData] = useState(function() {
-    const saved = localStorage.getItem("scorpion_v2");
-    return saved ? JSON.parse(saved) : { scorpionDocs: [], manpower: [], equipment: [], projects: ["NEOM", "Metro"] };
+    const saved = localStorage.getItem("scorpion_v3");
+    return saved ? JSON.parse(saved) : { manpower: [], equipment: [] };
   });
   const [page, setPage] = useState("dashboard");
-  const [toast, setToast] = useState(null);
 
   useEffect(function() {
-    localStorage.setItem("scorpion_v2", JSON.stringify(data));
-    if (!document.getElementById("scorp-css")) {
-      const s = document.createElement("style");
-      s.id = "scorp-css";
-      s.textContent = GLOBAL_CSS;
-      document.head.appendChild(s);
-    }
+    localStorage.setItem("scorpion_v3", JSON.stringify(data));
+    const styleTag = document.createElement("style");
+    styleTag.textContent = GLOBAL_CSS;
+    document.head.appendChild(styleTag);
   }, [data]);
 
-  const showToast = function(msg) {
-    setToast(msg);
-    setTimeout(function() { setToast(null); }, 3000);
-  };
-
-  const alerts = [
-    ...data.manpower.map(function(m) { return { label: m.name, src: "Manpower", days: daysUntil(m.expiryDate) }; }),
-    ...data.equipment.map(function(e) { return { label: e.name, src: "Equipment", days: daysUntil(e.expiryDate) }; })
-  ].filter(function(a) { return a.days !== null && a.days <= 90; }).sort(function(a, b) { return a.days - b.days; });
+  const alerts = [].concat(
+    data.manpower.map(function(m) { return { n: m.name, d: daysUntil(m.expiryDate) }; }),
+    data.equipment.map(function(e) { return { n: e.name, d: daysUntil(e.expiryDate) }; })
+  ).filter(function(a) { return a.d !== null && a.d <= 90; });
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: T.bg }}>
-      <aside style={{
+    <div style={{ display: "flex", height: "100vh" }}>
+      <aside style={{ width: "240px", background: T.sidebar, padding: "20px", borderRight: "1px solid " + T.border }}>
+        <h2 style={{ fontSize: "18px", color: T.blue, marginBottom: "30px" }}>SCORPION ARABIA</h2>
+        <button onClick={function() { setPage("dashboard"); }} style={{ width: "100%", padding: "10px", marginBottom: "10px", background: "none", border: "none", color: "white", textAlign: "left", cursor: "pointer" }}>DASHBOARD</button>
+        <button onClick={function() { setPage("manpower"); }} style={{ width: "100%", padding: "10px", marginBottom: "10px", background: "none", border: "none", color: "white", textAlign: "left", cursor: "pointer" }}>MANPOWER</button>
+        <button onClick={function() { setPage("equipment"); }} style={{ width: "100%", padding: "10px", marginBottom: "10px", background: "none", border: "none", color: "white", textAlign: "left", cursor: "pointer" }}>EQUIPMENT</button>
+      </aside>
+
+      <main style={{ flex: 1, padding: "40px", overflowY: "auto" }}>
+        {page === "dashboard" && (
+          <div className="fade-in">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px", marginBottom: "40px" }}>
+              <StatCard label="ALERTS" value={alerts.length} color={T.red} />
+              <StatCard label="STAFF" value={data.manpower.length} color={T.blue} />
+              <StatCard label="UNITS" value={data.equipment.length} color={T.gold} />
+            </div>
+            <div style={{ background: T.card, padding: "20px", borderRadius: "12px" }}>
+              <h3>EXPIRING SOON</h3>
+              {alerts.map(function(a, i) {
+                return <div key={i} style={{ padding: "10px 0", borderBottom: "1px solid " + T.borderLight }}>{a.n} — {a.d} days left</div>;
+              })}
+            </div>
+          </div>
+        )}
+
+        {page === "manpower" && (
+          <div className="fade-in">
+            <h2>MANPOWER</h2>
+            <ExcelDropZone type="manpower" onImport={function(list) {
+              setData(function(prev) { return { ...prev, manpower: prev.manpower.concat(list) }; });
+            }} />
+            <div style={{ background: T.card, padding: "20px", borderRadius: "12px" }}>
+              {data.manpower.map(function(m) {
+                return <div key={m.id} style={{ padding: "10px 0", borderBottom: "1px solid " + T.borderLight }}>{m.name} ({m.idNo}) - {fmtDate(m.expiryDate)}</div>;
+              })}
+            </div>
+          </div>
+        )}
+
+        {page === "equipment" && (
+          <div className="fade-in">
+            <h2>EQUIPMENT</h2>
+            <ExcelDropZone type="equipment" onImport={function(list) {
+              setData(function(prev) { return { ...prev, equipment: prev.equipment.concat(list) }; });
+            }} />
+            <div style={{ background: T.card, padding: "20px", borderRadius: "12px" }}>
+              {data.equipment.map(function(e) {
+                return <div key={e.id} style={{ padding: "10px 0", borderBottom: "1px solid " + T.borderLight }}>{e.name} ({e.idNo}) - {fmtDate(e.expiryDate)}</div>;
+              })}
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
