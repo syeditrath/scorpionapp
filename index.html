@@ -1,155 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scorpion Dashboard</title>
-  <style>
-    body { margin:0; font-family: Arial, sans-serif; background:#f4f6f9; }
-    .sidebar { width:220px; height:100vh; background:#111827; color:#fff; position:fixed; padding:20px; }
-    .sidebar h2{margin-bottom:20px}
-    .sidebar p{margin:10px 0; opacity:.7}
-    .main{ margin-left:240px; padding:20px }
-    .topbar{ display:flex; justify-content:space-between; gap:10px; margin-bottom:20px }
-    input,select,button{ padding:10px; border-radius:8px; border:1px solid #ccc }
-    button{ cursor:pointer; background:#2563eb; color:#fff; border:none }
-    .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:15px }
-    .card{ background:#fff; padding:15px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.1); transition:.3s }
-    .card:hover{ transform:translateY(-5px) }
-    .progress{ height:8px; background:#e5e7eb; border-radius:10px; margin-top:10px }
-    .progress-bar{ height:8px; background:#2563eb; border-radius:10px }
-    .equipment{ margin-top:30px }
-    .upload-box{ margin-top:20px; background:#fff; padding:15px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.1) }
-    .file-list li{ margin:5px 0 }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scorpion Dashboard</title>
+<style>
+body{margin:0;font-family:Arial;background:#f4f6f9}
+.sidebar{width:220px;height:100vh;background:#111827;color:#fff;position:fixed;padding:20px}
+.sidebar h2{margin-bottom:20px}
+.sidebar p{cursor:pointer;margin:10px 0;opacity:.7}
+.sidebar p:hover{opacity:1}
+.main{margin-left:240px;padding:20px}
+.section{display:none}
+.active{display:block}
+.card{background:#fff;padding:15px;border-radius:10px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+input,button{padding:8px;margin:5px;border-radius:6px;border:1px solid #ccc}
+button{background:#2563eb;color:#fff;border:none;cursor:pointer}
+.tab-btn{margin-right:5px}
+</style>
 </head>
 <body>
 
 <div class="sidebar">
-  <h2>Dashboard</h2>
-  <p>Projects</p>
-  <p>Equipment</p>
-  <p>Reports</p>
+<h2>Dashboard</h2>
+<p onclick="showSection('scorpion')">Scorpion Documents</p>
+<p onclick="showSection('projects')">Project Documents</p>
+<p onclick="showSection('manpower')">Manpower Documents</p>
+<p onclick="showSection('equipment')">Equipment Documents</p>
 </div>
 
 <div class="main">
 
-  <div class="topbar">
-    <input type="text" id="search" placeholder="Search projects...">
-    <select id="projectSelect"><option value="">Select Project</option></select>
-    <input type="file" id="excelFile" accept=".xlsx,.csv">
-  </div>
+<!-- Scorpion Documents -->
+<div id="scorpion" class="section active">
+<h2>Scorpion Documents</h2>
+<input type="text" id="companyLink" placeholder="Paste OneDrive Link">
+<button onclick="addCompanyLink()">Add</button>
+<ul id="companyList"></ul>
+</div>
 
-  <div class="grid" id="projectGrid"></div>
+<!-- Project Documents -->
+<div id="projects" class="section">
+<h2>Project Documents</h2>
+<input type="text" id="projectName" placeholder="New Project Name">
+<button onclick="addProject()">Add Project</button>
 
-  <div class="equipment" id="equipmentSection"></div>
+<div id="projectList"></div>
 
-  <div class="upload-box">
-    <h3>Upload PDF</h3>
-    <input type="file" id="pdfUpload" accept="application/pdf">
-    <button onclick="savePDF()">Upload</button>
-    <ul id="fileList" class="file-list"></ul>
-  </div>
+<div id="projectDetails"></div>
+</div>
+
+<!-- Manpower -->
+<div id="manpower" class="section">
+<h2>Manpower Documents</h2>
+<p>Coming soon</p>
+</div>
+
+<!-- Equipment -->
+<div id="equipment" class="section">
+<h2>Equipment Documents</h2>
+<p>Coming soon</p>
+</div>
 
 </div>
 
 <script>
-let projects = JSON.parse(localStorage.getItem('projects')) || [
-  { name:"Rastanura Project", status:"Active", progress:70, equipment:["Excavator","Crane","Drill"] },
-  { name:"Dammam Phase 2", status:"Delayed", progress:45, equipment:["Loader","Bulldozer"] }
-];
-
-const grid = document.getElementById("projectGrid");
-const searchInput = document.getElementById("search");
-const dropdown = document.getElementById("projectSelect");
-const equipmentSection = document.getElementById("equipmentSection");
-
-function saveToStorage(){ localStorage.setItem('projects', JSON.stringify(projects)); }
-
-function renderProjects(list){
-  grid.innerHTML="";
-  list.forEach(p=>{
-    const card=document.createElement("div");
-    card.className="card";
-    card.innerHTML=`<h3>${p.name}</h3><p>Status:${p.status}</p><div class='progress'><div class='progress-bar' style='width:${p.progress}%'></div></div>`;
-    grid.appendChild(card);
-  });
+// Navigation
+function showSection(id){
+ document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
 }
 
-function populateDropdown(){
-  dropdown.innerHTML='<option value="">Select Project</option>';
-  projects.forEach(p=>{
-    const option=document.createElement("option");
-    option.value=p.name;
-    option.textContent=p.name;
-    dropdown.appendChild(option);
-  });
+// Scorpion Docs
+function addCompanyLink(){
+ const link=document.getElementById('companyLink').value;
+ if(!link) return;
+ const data=JSON.parse(localStorage.getItem('companyLinks')||"[]");
+ data.push(link);
+ localStorage.setItem('companyLinks',JSON.stringify(data));
+ loadCompanyLinks();
 }
 
-function showEquipment(name){
-  const project=projects.find(p=>p.name===name);
-  if(!project){ equipmentSection.innerHTML=""; return; }
-
-  equipmentSection.innerHTML=`<h2>Equipment</h2><ul>${project.equipment.map(e=>`<li>${e}</li>`).join("")}</ul>`;
-  loadFiles(name);
+function loadCompanyLinks(){
+ const list=document.getElementById('companyList');
+ const data=JSON.parse(localStorage.getItem('companyLinks')||"[]");
+ list.innerHTML="";
+ data.forEach(l=>{
+ const li=document.createElement('li');
+ li.innerHTML=`<a href='${l}' target='_blank'>Open Document</a>`;
+ list.appendChild(li);
+ });
 }
 
-searchInput.addEventListener("input",()=>{
-  const value=searchInput.value.toLowerCase();
-  renderProjects(projects.filter(p=>p.name.toLowerCase().includes(value)));
-});
+// Projects
+let projects=JSON.parse(localStorage.getItem('projectsV2')||"[]");
 
-dropdown.addEventListener("change",()=>showEquipment(dropdown.value));
-
-// PDF Upload
-function savePDF(){
-  const fileInput=document.getElementById("pdfUpload");
-  const file=fileInput.files[0];
-  if(!file || !dropdown.value) return alert("Select project + file");
-
-  const reader=new FileReader();
-  reader.onload=function(){
-    const data=JSON.parse(localStorage.getItem('files')||"{}");
-    if(!data[dropdown.value]) data[dropdown.value]=[];
-    data[dropdown.value].push({name:file.name,content:reader.result});
-    localStorage.setItem('files', JSON.stringify(data));
-    loadFiles(dropdown.value);
-  };
-  reader.readAsDataURL(file);
+function addProject(){
+ const name=document.getElementById('projectName').value;
+ if(!name) return;
+ projects.push({name,docs:{invoices:[],jcc:[],wo:[]}});
+ localStorage.setItem('projectsV2',JSON.stringify(projects));
+ loadProjects();
 }
 
-function loadFiles(projectName){
-  const list=document.getElementById("fileList");
-  const data=JSON.parse(localStorage.getItem('files')||"{}");
-  list.innerHTML="";
-  (data[projectName]||[]).forEach(f=>{
-    const li=document.createElement("li");
-    li.innerHTML=`<a href='${f.content}' target='_blank'>${f.name}</a>`;
-    list.appendChild(li);
-  });
+function deleteProject(index){
+ projects.splice(index,1);
+ localStorage.setItem('projectsV2',JSON.stringify(projects));
+ loadProjects();
+ document.getElementById('projectDetails').innerHTML="";
 }
 
-// Excel/CSV import (simple CSV support)
-document.getElementById("excelFile").addEventListener("change",function(e){
-  const file=e.target.files[0];
-  if(!file) return;
-  const reader=new FileReader();
-  reader.onload=function(){
-    const text=reader.result;
-    const rows=text.split("\n").slice(1);
-    projects=rows.map(r=>{
-      const [name,status,progress]=r.split(",");
-      return { name, status, progress:parseInt(progress)||0, equipment:[] };
-    });
-    saveToStorage();
-    renderProjects(projects);
-    populateDropdown();
-  };
-  reader.readAsText(file);
-});
+function loadProjects(){
+ const list=document.getElementById('projectList');
+ list.innerHTML="";
+ projects.forEach((p,i)=>{
+ const div=document.createElement('div');
+ div.className='card';
+ div.innerHTML=`${p.name} 
+ <button onclick='openProject(${i})'>Open</button>
+ <button onclick='deleteProject(${i})'>Delete</button>`;
+ list.appendChild(div);
+ });
+}
 
-renderProjects(projects);
-populateDropdown();
+function openProject(index){
+ const p=projects[index];
+ const div=document.getElementById('projectDetails');
+ div.innerHTML=`
+ <h3>${p.name}</h3>
+ <button class='tab-btn' onclick="showTab(${index},'invoices')">Invoices</button>
+ <button class='tab-btn' onclick="showTab(${index},'jcc')">Job Completion Certificates</button>
+ <button class='tab-btn' onclick="showTab(${index},'wo')">Work Orders</button>
+ <div id='tabContent'></div>`;
+}
+
+function showTab(index,type){
+ const p=projects[index];
+ const content=document.getElementById('tabContent');
+ content.innerHTML=`
+ <input type='text' id='docLink' placeholder='Paste OneDrive Link'>
+ <button onclick='addDoc(${index},"${type}")'>Add</button>
+ <ul>${p.docs[type].map(d=>`<li><a href='${d}' target='_blank'>Open</a></li>`).join('')}</ul>`;
+}
+
+function addDoc(index,type){
+ const link=document.getElementById('docLink').value;
+ if(!link) return;
+ projects[index].docs[type].push(link);
+ localStorage.setItem('projectsV2',JSON.stringify(projects));
+ showTab(index,type);
+}
+
+// Init
+loadCompanyLinks();
+loadProjects();
 </script>
 
 </body>
