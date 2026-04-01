@@ -3,52 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scorpion Arabia - Premium</title>
+<title>Scorpion Arabia</title>
 
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
 <style>
 
-/* your existing CSS */
-
-/* HEADER */
-.header{
-  text-align:center;
-  margin-bottom:30px;
-  animation:fadeDown 0.6s ease;
-}
-
-.header-title{
-  font-size:26px;
-  font-weight:700;
-  letter-spacing:2px;
-}
-
-.header-sub{
-  font-size:12px;
-  color:var(--muted);
-  letter-spacing:1px;
-}
-
-/* Animation */
-@keyframes fadeDown{
-  from{
-    opacity:0;
-    transform:translateY(-20px);
-  }
-  to{
-    opacity:1;
-    transform:translateY(0);
-  }
-}
-
-</style>
-
-
-/* ===== COLOR CONTROL (EDIT HERE) ===== */
+/* ===== COLORS ===== */
 :root{
-  --bg:#0f172a;          /* MAIN BACKGROUND */
-  --card:#020617;        /* CARD COLOR */
-  --accent:#38bdf8;      /* PRIMARY COLOR */
+  --bg:#0f172a;
+  --card:#020617;
+  --accent:#38bdf8;
   --text:#e5e7eb;
   --muted:#94a3b8;
 }
@@ -83,27 +48,15 @@ body{
   object-fit:contain;
   border-radius:12px;
 
-  /* Glow */
-  box-shadow:0 0 15px rgba(56,189,248,0.4);
-
   /* Animation */
   animation:logoPulse 3s infinite ease-in-out;
 }
 
-/* Animation keyframes */
+/* Logo Animation */
 @keyframes logoPulse{
-  0%{
-    transform:scale(1);
-    box-shadow:0 0 10px rgba(56,189,248,0.3);
-  }
-  50%{
-    transform:scale(1.08);
-    box-shadow:0 0 25px rgba(56,189,248,0.8);
-  }
-  100%{
-    transform:scale(1);
-    box-shadow:0 0 10px rgba(56,189,248,0.3);
-  }
+  0%{transform:scale(1)}
+  50%{transform:scale(1.08)}
+  100%{transform:scale(1)}
 }
 
 .nav-item{
@@ -129,9 +82,35 @@ body{
   padding:30px;
 }
 
-.title{
-  font-size:24px;
+/* ===== HEADER ===== */
+.header{
+  text-align:left;
   margin-bottom:20px;
+  animation:fadeDown 0.6s ease;
+}
+
+.header-title{
+  font-size:26px;
+  font-weight:700;
+  letter-spacing:2px;
+}
+
+.header-sub{
+  font-size:12px;
+  color:var(--muted);
+  letter-spacing:1px;
+}
+
+/* Header Animation */
+@keyframes fadeDown{
+  from{
+    opacity:0;
+    transform:translateY(-20px);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0);
+  }
 }
 
 /* ===== STATS ===== */
@@ -229,13 +208,16 @@ button{
 
 <!-- MAIN -->
 <div class="main">
+
+<!-- HEADER -->
 <div class="header">
   <div class="header-title">SCORPION ARABIA</div>
   <div class="header-sub">Document & Asset Manager</div>
 </div>
+
 <!-- DASHBOARD -->
 <div id="dashboard" class="section active">
-<div class="title">Dashboard</div>
+<h2>Dashboard</h2>
 
 <div class="stats">
   <div class="stat"><h2 id="totalDocs">0</h2><p>Total Docs</p></div>
@@ -287,7 +269,7 @@ function showSection(id){
   document.getElementById(id).classList.add('active');
 }
 
-/* SCORPION DOCS */
+/* COMPANY DOCS */
 function addCompanyLink(){
   const link=document.getElementById('companyLink').value;
   if(!link) return;
