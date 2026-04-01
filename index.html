@@ -3,23 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <title>Scorpion Arabia</title>
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <style>
+        :root {
+            --bg: #f5f5f5;
+            --card: #ffffff;
+            --text: #000;
+            --sidebar: #1e1e2f;
+            --sidebar-hover: #343454;
+        }
+
+        body.dark {
+            --bg: #121212;
+            --card: #1f1f1f;
+            --text: #fff;
+            --sidebar: #0d0d16;
+            --sidebar-hover: #2b2b3f;
+        }
+
         body {
             margin: 0;
             font-family: Arial, sans-serif;
             display: flex;
             height: 100vh;
+            background: var(--bg);
+            color: var(--text);
             overflow: hidden;
         }
 
         /* Sidebar */
         .sidebar {
             width: 220px;
-            background-color: #1e1e2f;
-            color: #fff;
+            background: var(--sidebar);
+            color: white;
             padding-top: 20px;
             transition: transform 0.3s ease;
         }
@@ -36,14 +53,14 @@
 
         .tab:hover,
         .tab.active {
-            background-color: #343454;
+            background: var(--sidebar-hover);
         }
 
         /* Content */
         .content {
             flex: 1;
             padding: 20px;
-            background-color: #f5f5f5;
+            background: var(--bg);
             overflow-y: auto;
         }
 
@@ -56,29 +73,54 @@
         }
 
         .stat-box {
-            background: white;
+            background: var(--card);
             padding: 20px;
             margin-bottom: 15px;
             border-radius: 6px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.1);
         }
 
-        /* Mobile Header */
+        /* Header */
         .mobile-header {
             display: none;
-            background: #1e1e2f;
+            background: var(--sidebar);
             color: white;
             padding: 15px;
             align-items: center;
+            justify-content: space-between;
         }
 
         .menu-btn {
             font-size: 22px;
             cursor: pointer;
-            margin-right: 15px;
         }
 
-        /* Responsive Styles */
+        .toggle-btn {
+            cursor: pointer;
+            background: none;
+            border: 1px solid white;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        /* File upload */
+        .upload-box {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 6px;
+        }
+
+        .file-list {
+            margin-top: 15px;
+        }
+
+        .file-item {
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        /* Responsive */
         @media (max-width: 768px) {
             body {
                 flex-direction: column;
@@ -100,79 +142,111 @@
             .mobile-header {
                 display: flex;
             }
-
-            .content {
-                padding: 15px;
-            }
         }
     </style>
 </head>
 
 <body>
 
-    <!-- Mobile Header -->
-    <div class="mobile-header">
-        <div class="menu-btn" onclick="toggleMenu()">☰</div>
-        <div>Scorpion Arabia</div>
-    </div>
+<!-- Mobile Header -->
+<div class="mobile-header">
+    <span class="menu-btn" onclick="toggleMenu()">☰</span>
+    <span>Scorpion Arabia</span>
+    <button class="toggle-btn" onclick="toggleDarkMode()">🌙</button>
+</div>
 
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <h2>Scorpion</h2>
-        <div class="tab active" onclick="openTab('dashboard')">Dashboard</div>
-        <div class="tab" onclick="openTab('docs')">Scorpion Docs</div>
-        <div class="tab" onclick="openTab('projects')">Projects</div>
-    </div>
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+    <h2>Scorpion</h2>
+    <div class="tab active" onclick="openTab('dashboard')">Dashboard</div>
+    <div class="tab" onclick="openTab('docs')">Scorpion Docs</div>
+    <div class="tab" onclick="openTab('projects')">Projects</div>
+</div>
 
-    <!-- Content -->
-    <div class="content">
+<!-- Content -->
+<div class="content">
 
-        <div id="dashboard" class="tab-content active">
-            <h1>Dashboard</h1>
-            <div class="stat-box">
-                <h3>Total Docs</h3>
-                <p>0</p>
-            </div>
-            <div class="stat-box">
-                <h3>Projects</h3>
-                <p>0</p>
-            </div>
+    <!-- Dashboard -->
+    <div id="dashboard" class="tab-content active">
+        <h1>Dashboard</h1>
+        <div class="stat-box">
+            <h3>Total Docs</h3>
+            <p id="docCount">0</p>
         </div>
-
-        <div id="docs" class="tab-content">
-            <h1>Scorpion Documents</h1>
-            <p>0 Docs</p>
-            <button>Add Document</button>
-        </div>
-
-        <div id="projects" class="tab-content">
-            <h1>Projects</h1>
-            <p>0 Project Docs</p>
-            <button>Add Project</button>
+        <div class="stat-box">
+            <h3>Projects</h3>
+            <p>0</p>
         </div>
     </div>
 
-    <script>
-        function openTab(tabId) {
-            document.querySelectorAll('.tab-content')
-                .forEach(c => c.classList.remove('active'));
+    <!-- Docs -->
+    <div id="docs" class="tab-content">
+        <h1>Scorpion Documents</h1>
 
-            document.querySelectorAll('.tab')
-                .forEach(t => t.classList.remove('active'));
+        <div class="upload-box">
+            <input type="file" multiple onchange="uploadFiles(event)">
+            <div class="file-list" id="fileList"></div>
+        </div>
+    </div>
 
-            document.getElementById(tabId).classList.add('active');
-            event.target.classList.add('active');
+    <!-- Projects -->
+    <div id="projects" class="tab-content">
+        <h1>Projects</h1>
+        <p>No projects yet.</p>
+    </div>
 
-            // Auto close sidebar on mobile
-            if (window.innerWidth <= 768) {
-                toggleMenu();
-            }
+</div>
+
+<script>
+    // Tab switching
+    function openTab(tabId) {
+        document.querySelectorAll('.tab-content')
+            .forEach(c => c.classList.remove('active'));
+
+        document.querySelectorAll('.tab')
+            .forEach(t => t.classList.remove('active'));
+
+        document.getElementById(tabId).classList.add('active');
+        event.target.classList.add('active');
+
+        if (window.innerWidth <= 768) toggleMenu();
+    }
+
+    // Sidebar toggle
+    function toggleMenu() {
+        document.getElementById('sidebar').classList.toggle('open');
+    }
+
+    // Dark mode
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark');
+        localStorage.setItem('darkMode', document.body.classList.contains('dark'));
+    }
+
+    if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark');
+    }
+
+    // File upload
+    let totalDocs = 0;
+
+    function uploadFiles(event) {
+        let files = event.target.files;
+        let list = document.getElementById('fileList');
+
+        for (let file of files) {
+            let item = document.createElement('div');
+            item.className = 'file-item';
+            item.textContent = `${file.name} (${Math.round(file.size / 1024)} KB)`;
+            list.appendChild(item);
+            totalDocs++;
         }
 
-        function toggleMenu() {
-            document.getElementById('sidebar').classList.toggle('open');
-        }
-    </script>
+        document.getElementById('docCount').textContent = totalDocs;
+        event.target.value = '';
+    }
+</script>
 
 </body>
 </html>
+``
