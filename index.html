@@ -1,406 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scorpion Arabia</title>
+    <meta charset="UTF-8">
+    <title>Scorpion Arabia</title>
 
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<style>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
 
-/* ===== COLORS ===== */
-:root{
-  --bg:#0f172a;
-  --card:#020617;
-  --accent:#38bdf8;
-  --text:#e5e7eb;
-  --muted:#94a3b8;
-}
+        /* Sidebar */
+        .sidebar {
+            width: 220px;
+            background-color: #1e1e2f;
+            color: #fff;
+            padding-top: 20px;
+            transition: transform 0.3s ease;
+        }
 
-/* ===== BASE ===== */
-body{
-  margin:0;
-  font-family:'Segoe UI',sans-serif;
-  background:var(--bg);
-  color:var(--text);
-}
+        .sidebar h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
 
-/* ===== SIDEBAR ===== */
-.sidebar{
-  width:250px;
-  height:100vh;
-  background:#020617;
-  position:fixed;
-  padding:20px;
-}
+        .tab {
+            padding: 15px 20px;
+            cursor: pointer;
+        }
 
-.logo{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin-bottom:30px;
-}
+        .tab:hover,
+        .tab.active {
+            background-color: #343454;
+        }
 
-.logo img{
-  width:50px;
-  height:50px;
-  object-fit:contain;
-  border-radius:12px;
+        /* Content */
+        .content {
+            flex: 1;
+            padding: 20px;
+            background-color: #f5f5f5;
+            overflow-y: auto;
+        }
 
-  /* Animation */
-  animation:logoPulse 3s infinite ease-in-out;
-}
+        .tab-content {
+            display: none;
+        }
 
-/* Logo Animation */
-@keyframes logoPulse{
-  0%{transform:scale(1)}
-  50%{transform:scale(1.08)}
-  100%{transform:scale(1)}
-}
+        .tab-content.active {
+            display: block;
+        }
 
-.nav-item{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  padding:12px;
-  border-radius:10px;
-  cursor:pointer;
-  color:var(--muted);
-  transition:0.3s;
-}
+        .stat-box {
+            background: white;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
 
-.nav-item:hover{
-  background:#1e293b;
-  color:#fff;
-  transform:translateX(5px);
-}
+        /* Mobile Header */
+        .mobile-header {
+            display: none;
+            background: #1e1e2f;
+            color: white;
+            padding: 15px;
+            align-items: center;
+        }
 
-/* ===== MAIN ===== */
-.main{
-  margin-left:270px;
-  padding:30px;
-}
+        .menu-btn {
+            font-size: 22px;
+            cursor: pointer;
+            margin-right: 15px;
+        }
 
-/* ===== HEADER ===== */
-.header{
-  text-align:left;
-  margin-bottom:20px;
-  animation:fadeDown 0.6s ease;
-}
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
 
-.header-title{
-  font-size:26px;
-  font-weight:700;
-  letter-spacing:2px;
-}
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100%;
+                transform: translateX(-100%);
+                z-index: 1000;
+            }
 
-.header-sub{
-  font-size:12px;
-  color:var(--muted);
-  letter-spacing:1px;
-}
+            .sidebar.open {
+                transform: translateX(0);
+            }
 
-/* Header Animation */
-@keyframes fadeDown{
-  from{
-    opacity:0;
-    transform:translateY(-20px);
-  }
-  to{
-    opacity:1;
-    transform:translateY(0);
-  }
-}
+            .mobile-header {
+                display: flex;
+            }
 
-/* ===== STATS ===== */
-.stats{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-  gap:20px;
-  margin-bottom:30px;
-}
-
-.stat{
-  background:var(--card);
-  padding:20px;
-  border-radius:12px;
-  transition:0.3s;
-}
-
-.stat:hover{
-  transform:translateY(-5px);
-}
-
-/* ===== CARDS ===== */
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-  gap:20px;
-}
-
-.card{
-  background:var(--card);
-  padding:20px;
-  border-radius:12px;
-  transition:0.3s;
-}
-
-.card:hover{
-  transform:scale(1.03);
-}
-
-/* ===== SECTIONS ===== */
-.section{
-  display:none;
-}
-
-.active{
-  display:block;
-}
-
-/* ===== INPUT ===== */
-input,button{
-  padding:10px;
-  border-radius:6px;
-  border:none;
-  margin:5px;
-}
-
-button{
-  background:var(--accent);
-  cursor:pointer;
-}
-
-/* ===== TABS ===== */
-.tab-bar{
-  margin:15px 0;
-}
-
-.tab-bar button{
-  margin-right:10px;
-}
-
-</style>
+            .content {
+                padding: 15px;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
-<!-- SIDEBAR -->
-<div class="sidebar">
-  <div class="logo">
-    <img src="logo.png">
-    <h3>Scorpion</h3>
-  </div>
-
-  <div class="nav-item" onclick="showSection('dashboard')">
-    <i class="fa fa-chart-line"></i> Dashboard
-  </div>
-
-  <div class="nav-item" onclick="showSection('scorpion')">
-    <i class="fa fa-folder"></i> Scorpion Docs
-  </div>
-
-  <div class="nav-item" onclick="showSection('projects')">
-    <i class="fa fa-briefcase"></i> Projects
-  </div>
-</div>
-
-<!-- MAIN -->
-<div class="main">
-
-<!-- HEADER -->
-<div class="header">
-  <div class="header-title">SCORPION ARABIA</div>
-  <div class="header-sub">Document & Asset Manager</div>
-</div>
-
-<!-- DASHBOARD -->
-<div id="dashboard" class="section active">
-<h2>Dashboard</h2>
-
-<div class="stats">
-  <div class="stat"><h2 id="totalDocs">0</h2><p>Total Docs</p></div>
-  <div class="stat"><h2 id="projectsCount">0</h2><p>Projects</p></div>
-</div>
-
-<div class="grid">
-  <div class="card">
-    <h3>Scorpion Docs</h3>
-    <p id="companyCount">0 Docs</p>
-  </div>
-
-  <div class="card">
-    <h3>Project Docs</h3>
-    <p id="projDocCount">0 Docs</p>
-  </div>
-</div>
-</div>
-
-<!-- SCORPION DOCS -->
-<div id="scorpion" class="section">
-<h2>Scorpion Documents</h2>
-
-<input id="docTitle" placeholder="Document Title (e.g. CR Certificate)">
-<input id="companyLink" placeholder="Paste OneDrive link">
-<button onclick="addCompanyLink()">Add</button>
-
-<ul id="companyList"></ul>
-</div>
-
-<!-- PROJECTS -->
-<div id="projects" class="section">
-<h2>Projects</h2>
-
-<input id="projectName" placeholder="New Project">
-<button onclick="addProject()">Add</button>
-
-<div id="projectList"></div>
-<div id="projectDetails"></div>
-
-</div>
-
-</div>
-
-<script>
-
-/* NAVIGATION */
-function showSection(id){
-  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-
-/* COMPANY DOCS */
-function addCompanyLink(){
-  const title = document.getElementById('docTitle').value;
-  const link = document.getElementById('companyLink').value;
-
-  if(!title || !link) return;
-
-  let data = JSON.parse(localStorage.getItem('companyLinks') || "[]");
-
-  data.push({ title, link });
-
-  localStorage.setItem('companyLinks', JSON.stringify(data));
-
-  document.getElementById('docTitle').value = "";
-  document.getElementById('companyLink').value = "";
-
-  loadCompany();
-  updateStats();
-}
-
-function loadCompany(){
-  const list = document.getElementById('companyList');
-  const data = JSON.parse(localStorage.getItem('companyLinks') || "[]");
-
-  list.innerHTML = "";
-
-  data.forEach((doc, index)=>{
-    const li = document.createElement('li');
-
-    li.innerHTML = `
-      <strong>${doc.title}</strong><br>
-      <a href='${doc.link}' target='_blank'>Open Document</a>
-      <button onclick="deleteDoc(${index})">❌</button>
-    `;
-
-    list.appendChild(li);
-  });
-function deleteDoc(index){
-  let data = JSON.parse(localStorage.getItem('companyLinks') || "[]");
-
-  data.splice(index,1);
-
-  localStorage.setItem('companyLinks', JSON.stringify(data));
-
-  loadCompany();
-  updateStats();  
-}
-
-/* PROJECTS */
-let projects=JSON.parse(localStorage.getItem('projects')||"[]");
-
-function addProject(){
-  const name=document.getElementById('projectName').value;
-  if(!name) return;
-
-  projects.push({name,docs:{invoices:[],jcc:[],wo:[]}});
-  localStorage.setItem('projects',JSON.stringify(projects));
-
-  loadProjects();
-  updateStats();
-}
-
-function loadProjects(){
-  const list=document.getElementById('projectList');
-  list.innerHTML="";
-
-  projects.forEach((p,i)=>{
-    const div=document.createElement('div');
-    div.className='card';
-    div.innerHTML=`${p.name} <button onclick='openProject(${i})'>Open</button>`;
-    list.appendChild(div);
-  });
-}
-
-function openProject(i){
-  const p=projects[i];
-  const d=document.getElementById('projectDetails');
-
-  d.innerHTML=`
-    <h3>${p.name}</h3>
-    <div class='tab-bar'>
-      <button onclick="showTab(${i},'invoices')">Invoices</button>
-      <button onclick="showTab(${i},'jcc')">JCC</button>
-      <button onclick="showTab(${i},'wo')">Work Orders</button>
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <div class="menu-btn" onclick="toggleMenu()">☰</div>
+        <div>Scorpion Arabia</div>
     </div>
-    <div id='tab'></div>
-  `;
-}
 
-function showTab(i,t){
-  const p=projects[i];
-  const tab=document.getElementById('tab');
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <h2>Scorpion</h2>
+        <div class="tab active" onclick="openTab('dashboard')">Dashboard</div>
+        <div class="tab" onclick="openTab('docs')">Scorpion Docs</div>
+        <div class="tab" onclick="openTab('projects')">Projects</div>
+    </div>
 
-  tab.innerHTML=`
-    <input id='docLink'>
-    <button onclick='addDoc(${i},"${t}")'>Add</button>
-    <ul>${p.docs[t].map(x=>`<li><a href='${x}' target='_blank'>Open</a></li>`).join('')}</ul>
-  `;
-}
+    <!-- Content -->
+    <div class="content">
 
-function addDoc(i,t){
-  const link=document.getElementById('docLink').value;
+        <div id="dashboard" class="tab-content active">
+            <h1>Dashboard</h1>
+            <div class="stat-box">
+                <h3>Total Docs</h3>
+                <p>0</p>
+            </div>
+            <div class="stat-box">
+                <h3>Projects</h3>
+                <p>0</p>
+            </div>
+        </div>
 
-  projects[i].docs[t].push(link);
-  localStorage.setItem('projects',JSON.stringify(projects));
+        <div id="docs" class="tab-content">
+            <h1>Scorpion Documents</h1>
+            <p>0 Docs</p>
+            <button>Add Document</button>
+        </div>
 
-  showTab(i,t);
-  updateStats();
-}
+        <div id="projects" class="tab-content">
+            <h1>Projects</h1>
+            <p>0 Project Docs</p>
+            <button>Add Project</button>
+        </div>
+    </div>
 
-/* STATS */
-function updateStats(){
-  const company=JSON.parse(localStorage.getItem('companyLinks')||"[]").length;
+    <script>
+        function openTab(tabId) {
+            document.querySelectorAll('.tab-content')
+                .forEach(c => c.classList.remove('active'));
 
-  let projDocs=0;
-  projects.forEach(p=>{
-    projDocs+=p.docs.invoices.length+p.docs.jcc.length+p.docs.wo.length;
-  });
+            document.querySelectorAll('.tab')
+                .forEach(t => t.classList.remove('active'));
 
-  document.getElementById('totalDocs').innerText=company+projDocs;
-  document.getElementById('projectsCount').innerText=projects.length;
-  document.getElementById('companyCount').innerText=company+" Docs";
-  document.getElementById('projDocCount').innerText=projDocs+" Docs";
-}
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
 
-/* INIT */
-loadCompany();
-loadProjects();
-updateStats();
+            // Auto close sidebar on mobile
+            if (window.innerWidth <= 768) {
+                toggleMenu();
+            }
+        }
 
-</script>
+        function toggleMenu() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+    </script>
 
 </body>
 </html>
