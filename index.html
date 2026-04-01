@@ -241,6 +241,7 @@ button{
 <div id="scorpion" class="section">
 <h2>Scorpion Documents</h2>
 
+<input id="docTitle" placeholder="Document Title (e.g. CR Certificate)">
 <input id="companyLink" placeholder="Paste OneDrive link">
 <button onclick="addCompanyLink()">Add</button>
 
@@ -271,27 +272,50 @@ function showSection(id){
 
 /* COMPANY DOCS */
 function addCompanyLink(){
-  const link=document.getElementById('companyLink').value;
-  if(!link) return;
+  const title = document.getElementById('docTitle').value;
+  const link = document.getElementById('companyLink').value;
 
-  let data=JSON.parse(localStorage.getItem('companyLinks')||"[]");
-  data.push(link);
+  if(!title || !link) return;
 
-  localStorage.setItem('companyLinks',JSON.stringify(data));
+  let data = JSON.parse(localStorage.getItem('companyLinks') || "[]");
+
+  data.push({ title, link });
+
+  localStorage.setItem('companyLinks', JSON.stringify(data));
+
+  document.getElementById('docTitle').value = "";
+  document.getElementById('companyLink').value = "";
+
   loadCompany();
   updateStats();
 }
 
 function loadCompany(){
-  const list=document.getElementById('companyList');
-  const data=JSON.parse(localStorage.getItem('companyLinks')||"[]");
+  const list = document.getElementById('companyList');
+  const data = JSON.parse(localStorage.getItem('companyLinks') || "[]");
 
-  list.innerHTML="";
-  data.forEach(l=>{
-    const li=document.createElement('li');
-    li.innerHTML=`<a href='${l}' target='_blank'>Open</a>`;
+  list.innerHTML = "";
+
+  data.forEach((doc, index)=>{
+    const li = document.createElement('li');
+
+    li.innerHTML = `
+      <strong>${doc.title}</strong><br>
+      <a href='${doc.link}' target='_blank'>Open Document</a>
+      <button onclick="deleteDoc(${index})">❌</button>
+    `;
+
     list.appendChild(li);
   });
+function deleteDoc(index){
+  let data = JSON.parse(localStorage.getItem('companyLinks') || "[]");
+
+  data.splice(index,1);
+
+  localStorage.setItem('companyLinks', JSON.stringify(data));
+
+  loadCompany();
+  updateStats();  
 }
 
 /* PROJECTS */
