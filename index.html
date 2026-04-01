@@ -6,7 +6,35 @@
 <title>Scorpion Arabia - Premium</title>
 
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+.header{
+  text-align:center;
+  margin-bottom:30px;
+  animation:fadeDown 0.6s ease;
+}
 
+.header-title{
+  font-size:26px;
+  font-weight:700;
+  letter-spacing:2px;
+}
+
+.header-sub{
+  font-size:12px;
+  color:var(--muted);
+  letter-spacing:1px;
+}
+
+/* Animation */
+@keyframes fadeDown{
+  from{
+    opacity:0;
+    transform:translateY(-20px);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0);
+  }
+}
 <style>
 
 /* ===== COLOR CONTROL (EDIT HERE) ===== */
@@ -43,8 +71,32 @@ body{
 }
 
 .logo img{
-  width:45px;
-  border-radius:8px;
+  width:50px;
+  height:50px;
+  object-fit:contain;
+  border-radius:12px;
+
+  /* Glow */
+  box-shadow:0 0 15px rgba(56,189,248,0.4);
+
+  /* Animation */
+  animation:logoPulse 3s infinite ease-in-out;
+}
+
+/* Animation keyframes */
+@keyframes logoPulse{
+  0%{
+    transform:scale(1);
+    box-shadow:0 0 10px rgba(56,189,248,0.3);
+  }
+  50%{
+    transform:scale(1.08);
+    box-shadow:0 0 25px rgba(56,189,248,0.8);
+  }
+  100%{
+    transform:scale(1);
+    box-shadow:0 0 10px rgba(56,189,248,0.3);
+  }
 }
 
 .nav-item{
@@ -170,7 +222,10 @@ button{
 
 <!-- MAIN -->
 <div class="main">
-
+<div class="header">
+  <div class="header-title">SCORPION ARABIA</div>
+  <div class="header-sub">Document & Asset Manager</div>
+</div>
 <!-- DASHBOARD -->
 <div id="dashboard" class="section active">
 <div class="title">Dashboard</div>
